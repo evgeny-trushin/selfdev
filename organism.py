@@ -22,7 +22,7 @@ from collections import defaultdict
 
 # ==================== Constants ====================
 
-ROOT_DIR = Path(__file__).resolve().parent
+ROOT_DIR = Path(__file__).resolve().parent.parent
 STATE_FILE = Path(__file__).resolve().parent / "organism_state.json"
 REQUIREMENTS_FILE = Path(__file__).resolve().parent / "requirements.md"
 PRINCIPLES_FILE = Path(__file__).resolve().parent / "principles.md"
