@@ -12,9 +12,11 @@
 #   ./develop.sh --debug   # Debug perspective: issues, TODOs
 #
 # Additional options:
-#   --state   Show current organism state
-#   --advance Advance to next generation
-#   --help    Show this help message
+#   --state     Show current organism state
+#   --advance   Advance to next generation
+#   --self      Analyze the selfdev project itself
+#   --root DIR  Analyze a specific directory
+#   --help      Show this help message
 #
 
 set -e
@@ -67,6 +69,8 @@ show_help() {
     echo "  --all        Run all perspectives (default if no perspective specified)"
     echo "  --state      Show current organism state"
     echo "  --advance    Advance to next generation after analysis"
+    echo "  --self       Analyze the selfdev project itself"
+    echo "  --root DIR   Analyze a specific directory"
     echo "  --no-color   Disable colored output"
     echo "  --help       Show this help message"
     echo ""
@@ -75,6 +79,8 @@ show_help() {
     echo "  $(basename "$0") --user --test # Run user and test perspectives"
     echo "  $(basename "$0") --debug       # Only debug perspective"
     echo "  $(basename "$0") --state       # Show current state"
+    echo "  $(basename "$0") --self        # Analyze selfdev itself"
+    echo "  $(basename "$0") --root /path  # Analyze a specific project"
     echo ""
     echo "The system generates development prompts based on:"
     echo "  - Current codebase state"
