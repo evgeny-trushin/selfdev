@@ -930,10 +930,22 @@ def main():
     parser.add_argument("--state", action="store_true", help="Show current state")
     parser.add_argument("--advance", action="store_true", help="Advance to next generation")
     parser.add_argument("--no-color", action="store_true", help="Disable colored output")
+    parser.add_argument("--root", type=str, default=None,
+                        help="Root directory to analyze (default: parent directory)")
+    parser.add_argument("--self", action="store_true",
+                        help="Analyze the selfdev project itself")
 
     args = parser.parse_args()
 
-    organism = SelfDevelopmentOrganism()
+    # Determine root directory
+    if args.self:
+        root_dir = Path(__file__).resolve().parent
+    elif args.root:
+        root_dir = Path(args.root).resolve()
+    else:
+        root_dir = ROOT_DIR
+
+    organism = SelfDevelopmentOrganism(root_dir=root_dir)
 
     if args.no_color:
         organism.formatter.use_colors = False
