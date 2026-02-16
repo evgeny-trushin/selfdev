@@ -1,0 +1,178 @@
+import ast
+import subprocess
+from pathlib import Path
+from typing import Dict, List, Optional
+from .models import FileAnalysis
+from .constants import (
+    ANALYZABLE_DIRS,
+    TEST_DIRS,
+    MAX_FILE_LINES,
+    COMPLEXITY_THRESHOLD,
+)
+
+class CodeAnalyzer:
+    """Analyzes code structure and metrics"""
+
+    def __init__(self, root_dir: Path):
+        self.root_dir = root_dir
+        self.file_analyses: Dict[str, FileAnalysis] = {}
+
+    def analyze_file(self, file_path: Path) -> Optional[FileAnalysis]:
+        """Analyze a single Python file"""
+        if not file_path.exists() or not file_path.suffix == ".py":
+            return None
+
+        try:
+            content = file_path.read_text(encoding="utf-8")
+            tree = ast.parse(content)
+        except (SyntaxError, UnicodeDecodeError):
+            return FileAnalysis(
+                path=str(file_path.relative_to(self.root_dir)),
+                lines=0,
+                functions=0,
+                classes=0,
+                imports=0,
+                complexity=0,
+                has_tests=False,
+                issues=["Syntax error in file"]
+            )
+
+        lines = len(content.splitlines())
+        functions = sum(1 for node in ast.walk(tree) if isinstance(node, ast.FunctionDef))
+        classes = sum(1 for node in ast.walk(tree) if isinstance(node, ast.ClassDef))
+        imports = sum(1 for node in ast.walk(tree) if isinstance(node, (ast.Import, ast.ImportFrom)))
+
+        # Calculate complexity (simplified McCabe)
+        complexity = self._calculate_complexity(tree)
+
+        # Check if this is a test file
+        rel_path = str(file_path.relative_to(self.root_dir))
+        has_tests = any(td in rel_path for td in TEST_DIRS) or "test" in file_path.name.lower()
+
+        issues = []
+        if lines > MAX_FILE_LINES:
+            issues.append(f"File too long: {lines} lines (max {MAX_FILE_LINES})")
+        if complexity > COMPLEXITY_THRESHOLD:
+            issues.append(f"High complexity: {complexity:.1f} (max {COMPLEXITY_THRESHOLD})")
+
+        return FileAnalysis(
+            path=rel_path,
+            lines=lines,
+            functions=functions,
+            classes=classes,
+            imports=imports,
+            complexity=complexity,
+            has_tests=has_tests,
+            issues=issues
+        )
+
+    def _calculate_complexity(self, tree: ast.AST) -> float:
+        """Calculate simplified cyclomatic complexity"""
+        complexity = 1
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.If, ast.While, ast.For, ast.ExceptHandler)):
+                complexity += 1
+            elif isinstance(node, ast.BoolOp):
+                complexity += len(node.values) - 1
+        return complexity
+
+    def analyze_directory(self, dir_path: Path) -> Dict[str, FileAnalysis]:
+        """Analyze all Python files in a directory"""
+        results = {}
+        if not dir_path.exists():
+            return results
+
+        for file_path in dir_path.rglob("*.py"):
+            if "__pycache__" in str(file_path):
+                continue
+            analysis = self.analyze_file(file_path)
+            if analysis:
+                results[analysis.path] = analysis
+
+        return results
+
+    def get_all_analyses(self) -> Dict[str, FileAnalysis]:
+        """Analyze all relevant directories"""
+        all_results = {}
+
+        for dir_name in ANALYZABLE_DIRS + TEST_DIRS:
+            dir_path = self.root_dir / dir_name
+            results = self.analyze_directory(dir_path)
+            all_results.update(results)
+
+        # Also analyze root Python files
+        for file_path in self.root_dir.glob("*.py"):
+            analysis = self.analyze_file(file_path)
+            if analysis:
+                all_results[analysis.path] = analysis
+
+        self.file_analyses = all_results
+        return all_results
+
+
+class GitAnalyzer:
+    """Analyzes Git history and state"""
+
+    def __init__(self, root_dir: Path):
+        self.root_dir = root_dir
+
+    def get_current_hash(self) -> str:
+        """Get current commit hash"""
+        try:
+            result = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=self.root_dir,
+                capture_output=True,
+                text=True
+            )
+            return result.stdout.strip()[:8]
+        except Exception:
+            return ""
+
+    def get_recent_commits(self, count: int = 10) -> List[Dict]:
+        """Get recent commits"""
+        try:
+            result = subprocess.run(
+                ["git", "log", f"-{count}", "--pretty=format:%H|%s|%ad", "--date=iso"],
+                cwd=self.root_dir,
+                capture_output=True,
+                text=True
+            )
+            commits = []
+            for line in result.stdout.strip().split("\n"):
+                if "|" in line:
+                    parts = line.split("|", 2)
+                    commits.append({
+                        "hash": parts[0][:8],
+                        "message": parts[1] if len(parts) > 1 else "",
+                        "date": parts[2] if len(parts) > 2 else ""
+                    })
+            return commits
+        except Exception:
+            return []
+
+    def get_uncommitted_changes(self) -> List[str]:
+        """Get list of uncommitted files"""
+        try:
+            result = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=self.root_dir,
+                capture_output=True,
+                text=True
+            )
+            return [line.strip() for line in result.stdout.strip().split("\n") if line.strip()]
+        except Exception:
+            return []
+
+    def get_branch(self) -> str:
+        """Get current branch name"""
+        try:
+            result = subprocess.run(
+                ["git", "branch", "--show-current"],
+                cwd=self.root_dir,
+                capture_output=True,
+                text=True
+            )
+            return result.stdout.strip()
+        except Exception:
+            return "unknown"
