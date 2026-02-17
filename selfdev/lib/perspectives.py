@@ -181,7 +181,18 @@ class TestPerspective(PerspectiveAnalyzer):
 
         # Check for untested complex files
         for analysis in source_files:
-            if analysis.complexity > COMPLEXITY_THRESHOLD:
+            # Check if a corresponding test file exists
+            file_name = Path(analysis.path).name
+            base_name = file_name.replace(".py", "")
+            has_corresponding_test = False
+
+            for test_analysis in test_files:
+                test_path = test_analysis.path
+                if f"test_{file_name}" in test_path or f"test_{base_name}" in test_path:
+                    has_corresponding_test = True
+                    break
+
+            if not has_corresponding_test and analysis.complexity > COMPLEXITY_THRESHOLD:
                 prompts.append(Prompt(
                     perspective=Perspective.TEST,
                     priority=Priority.HIGH,
