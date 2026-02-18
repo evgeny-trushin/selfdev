@@ -36,7 +36,8 @@ class PromptFormatter:
         # Priority and title
         priority_color = self.COLORS.get(prompt.priority, "")
         priority_str = prompt.priority.name
-        lines.append(self._c(priority_color, f"[{priority_str}]") + f" {self.BOLD}{prompt.title}{self.RESET}")
+        title = f"{self.BOLD}{prompt.title}{self.RESET}" if self.use_colors else prompt.title
+        lines.append(self._c(priority_color, f"[{priority_str}]") + f" {title}")
 
         # Description
         lines.append(f"  {prompt.description}")
