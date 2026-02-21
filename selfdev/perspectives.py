@@ -18,7 +18,8 @@ from models import (
     TEST_DIRS,
     FileAnalysis,
 )
-from analyzers import CodeAnalyzer, GitAnalyzer
+from analyzers import CodeAnalyzer
+from git_analyzer import GitAnalyzer
 
 
 class PerspectiveAnalyzer(ABC):

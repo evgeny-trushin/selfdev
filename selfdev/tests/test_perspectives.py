@@ -9,7 +9,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from models import OrganismState, Perspective, Priority
-from analyzers import GitAnalyzer
+from git_analyzer import GitAnalyzer
 from perspectives import TestPerspective, SystemPerspective
 from user_perspective import UserPerspective
 from diagnostics import AnalyticsPerspective, DebugPerspective
