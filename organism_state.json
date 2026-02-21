@@ -1,26 +1,18 @@
 {
-  "generation": 1,
+  "generation": 4,
   "created_at": "",
-  "last_updated": "2026-02-21T20:37:11.873965+00:00",
-  "development_stage": "embryonic",
-  "fitness_scores": {
-    "user": 0.7666666666666666,
-    "test": 0.0,
-    "system": 0.5,
-    "analytics": 0.5,
-    "debug": 1.0
-  },
+  "last_updated": "2026-02-22T07:35:07.045284+00:00",
+  "development_stage": "growth",
+  "fitness_scores": {},
   "fitness_history": [
     {
-      "generation": 0,
-      "timestamp": "2026-02-15T19:03:13.793547+00:00",
-      "user": 0.5,
-      "test": 0.3
+      "generation": 3,
+      "timestamp": "2026-02-22T07:35:06.975165+00:00",
+      "increment": 1
     }
   ],
   "prompts_generated": 0,
   "prompts_completed": 0,
   "last_git_hash": "",
-  "requirements_last_checked": "2026-02-21T11:52:49.167033+00:00",
-  "principles_last_checked": "2026-02-21T11:52:49.167033+00:00"
+  "last_increment_shown": 0
 }

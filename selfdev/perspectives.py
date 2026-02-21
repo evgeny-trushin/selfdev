@@ -54,7 +54,24 @@ class TestPerspective(PerspectiveAnalyzer):
         source_files = [a for a in analyses.values() if not a.has_tests]
         test_files = [a for a in analyses.values() if a.has_tests]
 
-        if not any((self.root_dir / td).exists() for td in TEST_DIRS):
+        # Look for test directories at root level AND inside sub-directories
+        test_dir_found = False
+        for td in TEST_DIRS:
+            if (self.root_dir / td).exists():
+                test_dir_found = True
+                break
+        if not test_dir_found:
+            for child in sorted(self.root_dir.iterdir()):
+                if not child.is_dir() or child.name.startswith("."):
+                    continue
+                for td in TEST_DIRS:
+                    if (child / td).exists():
+                        test_dir_found = True
+                        break
+                if test_dir_found:
+                    break
+
+        if not test_dir_found:
             prompts.append(Prompt(
                 perspective=Perspective.TEST,
                 priority=Priority.CRITICAL,

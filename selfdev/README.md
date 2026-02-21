@@ -10,6 +10,18 @@ The system treats software development as biological evolution. A codebase progr
 
 State is persisted in `organism_state.json` so the system remembers its evolutionary history across runs.
 
+## Development Workflow
+
+Follow these steps **in order** for every generation:
+
+1. **Run `./develop.sh`** — generates prioritised prompts based on codebase state
+2. **Implement the prompts** — make the actual code changes described by the prompts
+3. **Run `./develop.sh --advance`** — records fitness scores and advances the generation
+4. **Commit & push everything together** — `git add -A && git commit && git push`
+
+> **Important:** Never commit `organism_state.json` changes alone.
+> Always commit them together with the implementation that addresses the prompts.
+
 ## Quick Start
 
 ```bash
@@ -32,6 +44,15 @@ State is persisted in `organism_state.json` so the system remembers its evolutio
 # Advance to the next generation after implementing prompts
 ./develop.sh --advance
 
+# Revert a specific increment using git history
+./develop.sh --revert=0001
+
+# Revert from increment 0020 down to the current todo
+./develop.sh --revert_from=0020
+
+# Revert and re-implement an increment from scratch
+./develop.sh --redo=0001
+
 # Analyse the selfdev project itself
 ./develop.sh --self
 
@@ -44,11 +65,49 @@ State is persisted in `organism_state.json` so the system remembers its evolutio
 
 Requires **Python 3.8+** with no external dependencies (stdlib only).
 
+## Revert and Redo
+
+Three commands let you roll back or redo increments using git history:
+
+| Command | Description |
+|---------|-------------|
+| `--revert=N` | Generate a prompt to **revert** increment N. Lists all git commits matching `INCREMENT N` and produces `git revert` commands in reverse chronological order. If the increment file is marked done it suggests renaming it back to todo. |
+| `--revert_from=N` | Generate a prompt to **revert a range** of increments from N back to the current todo. Covers every increment in the range and lists commits for each one. |
+| `--redo=N` | **Revert then re-implement** increment N. Outputs the revert instructions first, then the full requirement (description, acceptance criteria, principles) so you can implement it from scratch. |
+
+### Example: revert a single increment
+
+```bash
+./develop.sh --revert=0001
+```
+
+Output includes:
+- All git commits whose message contains `INCREMENT 0001`
+- A `--stat` diff summary for each commit
+- Step-by-step `git revert --no-commit` commands
+- Post-revert cleanup (rename done → todo)
+
+### Example: revert a range
+
+```bash
+./develop.sh --revert_from=0020
+```
+
+Reverts increments 0020, 0019, … down to the current todo increment, processing them in reverse order.
+
+### Example: redo an increment
+
+```bash
+./develop.sh --redo=0001
+```
+
+Combines the revert prompt with the original requirement prompt so you can undo the previous implementation and start fresh.
+
 ## Perspectives
 
 | Perspective | Flag | Analyses | Key Metrics |
 |-------------|------|----------|-------------|
-| **User** | `--user` | Documentation, README, changelog | Content quality, completeness |
+| **User** | `--user` | Documentation, README, package metadata | Content quality, completeness |
 | **Test** | `--test` | Test coverage, test-to-source ratio | File coverage, complex file testing |
 | **System** | `--system` | Architecture, complexity, file length | Cyclomatic complexity (<10), file lines (<300) |
 | **Analytics** | `--analytics` | Fitness trends, commit patterns | Regression detection, fix rate |

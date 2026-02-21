@@ -14,34 +14,17 @@ from models import (
 
 
 class PromptFormatter:
-    """Formats prompts for console output"""
+    """Formats prompts for console output (plain text, no ANSI colors — see principle CLN)"""
 
-    COLORS = {
-        Priority.CRITICAL: "\033[91m",  # Red
-        Priority.HIGH: "\033[93m",       # Yellow
-        Priority.MEDIUM: "\033[94m",     # Blue
-        Priority.LOW: "\033[92m",        # Green
-        Priority.INFO: "\033[90m",       # Gray
-    }
-    RESET = "\033[0m"
-    BOLD = "\033[1m"
-
-    def __init__(self, use_colors: bool = True):
-        self.use_colors = use_colors
-
-    def _c(self, color: str, text: str) -> str:
-        """Apply color if enabled"""
-        if self.use_colors:
-            return f"{color}{text}{self.RESET}"
-        return text
+    def __init__(self):
+        pass
 
     def format_prompt(self, prompt: Prompt) -> str:
         """Format a single prompt"""
         lines = []
 
-        priority_color = self.COLORS.get(prompt.priority, "")
         priority_str = prompt.priority.name
-        lines.append(self._c(priority_color, f"[{priority_str}]") + f" {self.BOLD}{prompt.title}{self.RESET}")
+        lines.append(f"[{priority_str}] {prompt.title}")
 
         lines.append(f"  {prompt.description}")
 

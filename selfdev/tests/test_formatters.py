@@ -13,7 +13,7 @@ from formatters import PromptFormatter
 class TestPromptFormatter(unittest.TestCase):
 
     def test_format_prompt_no_color(self):
-        formatter = PromptFormatter(use_colors=False)
+        formatter = PromptFormatter()
         p = Prompt(
             perspective=Perspective.USER,
             priority=Priority.HIGH,
@@ -28,7 +28,7 @@ class TestPromptFormatter(unittest.TestCase):
         self.assertIn("Criterion 1", output)
 
     def test_format_prompt_with_location(self):
-        formatter = PromptFormatter(use_colors=False)
+        formatter = PromptFormatter()
         p = Prompt(
             perspective=Perspective.SYSTEM,
             priority=Priority.MEDIUM,
@@ -41,7 +41,7 @@ class TestPromptFormatter(unittest.TestCase):
         self.assertIn("src/module.py:42", output)
 
     def test_format_prompt_with_metrics(self):
-        formatter = PromptFormatter(use_colors=False)
+        formatter = PromptFormatter()
         p = Prompt(
             perspective=Perspective.TEST,
             priority=Priority.HIGH,
@@ -55,7 +55,7 @@ class TestPromptFormatter(unittest.TestCase):
         self.assertIn("80.0", output)
 
     def test_format_header(self):
-        formatter = PromptFormatter(use_colors=False)
+        formatter = PromptFormatter()
         state = OrganismState(generation=5)
         output = formatter.format_header(Perspective.USER, 0.75, state)
         self.assertIn("USER", output)
@@ -63,7 +63,7 @@ class TestPromptFormatter(unittest.TestCase):
         self.assertIn("growth", output)
 
     def test_format_summary(self):
-        formatter = PromptFormatter(use_colors=False)
+        formatter = PromptFormatter()
         state = OrganismState()
         state.fitness_scores = {"user": 0.8, "test": 0.6}
         prompts = [
@@ -77,8 +77,9 @@ class TestPromptFormatter(unittest.TestCase):
         self.assertIn("CRITICAL: 1", output)
         self.assertIn("HIGH: 1", output)
 
-    def test_color_output(self):
-        formatter = PromptFormatter(use_colors=True)
+    def test_no_ansi_in_output(self):
+        """Output must be plain text with no ANSI escape codes (principle CLN)."""
+        formatter = PromptFormatter()
         p = Prompt(
             perspective=Perspective.USER,
             priority=Priority.CRITICAL,
@@ -86,10 +87,11 @@ class TestPromptFormatter(unittest.TestCase):
             description="Very critical",
         )
         output = formatter.format_prompt(p)
-        self.assertIn("\033[91m", output)
+        self.assertNotIn("\033[", output)
+        self.assertIn("[CRITICAL]", output)
 
     def test_format_prompt_without_location(self):
-        formatter = PromptFormatter(use_colors=False)
+        formatter = PromptFormatter()
         p = Prompt(
             perspective=Perspective.USER,
             priority=Priority.INFO,
@@ -100,7 +102,7 @@ class TestPromptFormatter(unittest.TestCase):
         self.assertNotIn("Location:", output)
 
     def test_format_prompt_file_path_only(self):
-        formatter = PromptFormatter(use_colors=False)
+        formatter = PromptFormatter()
         p = Prompt(
             perspective=Perspective.USER,
             priority=Priority.LOW,
@@ -113,7 +115,7 @@ class TestPromptFormatter(unittest.TestCase):
         self.assertNotIn(":", output.split("src/module.py")[1].split("\n")[0])
 
     def test_format_summary_empty(self):
-        formatter = PromptFormatter(use_colors=False)
+        formatter = PromptFormatter()
         state = OrganismState()
         prompts = []
         output = formatter.format_summary(state, prompts)
@@ -121,7 +123,7 @@ class TestPromptFormatter(unittest.TestCase):
         self.assertNotIn("Overall Fitness", output)  # No scores
 
     def test_format_summary_with_fitness_no_prompts(self):
-        formatter = PromptFormatter(use_colors=False)
+        formatter = PromptFormatter()
         state = OrganismState()
         state.fitness_scores = {"user": 1.0}
         prompts = []
@@ -130,7 +132,7 @@ class TestPromptFormatter(unittest.TestCase):
         self.assertIn("Overall Fitness: 100.00%", output)
 
     def test_format_prompt_all_fields(self):
-        formatter = PromptFormatter(use_colors=False)
+        formatter = PromptFormatter()
         p = Prompt(
             perspective=Perspective.SYSTEM,
             priority=Priority.MEDIUM,
@@ -155,7 +157,7 @@ class TestPromptFormatter(unittest.TestCase):
 
     def test_format_summary_empty_prompts(self):
         """Summary with no prompts should still render."""
-        formatter = PromptFormatter(use_colors=False)
+        formatter = PromptFormatter()
         state = OrganismState()
         state.fitness_scores = {"user": 0.9}
         output = formatter.format_summary(state, [])
@@ -164,7 +166,7 @@ class TestPromptFormatter(unittest.TestCase):
 
     def test_format_summary_no_fitness_scores(self):
         """Summary without fitness scores should not show overall fitness."""
-        formatter = PromptFormatter(use_colors=False)
+        formatter = PromptFormatter()
         state = OrganismState()
         prompts = [
             Prompt(perspective=Perspective.USER, priority=Priority.HIGH,
@@ -174,17 +176,10 @@ class TestPromptFormatter(unittest.TestCase):
         self.assertIn("Total Prompts: 1", output)
         self.assertNotIn("Overall Fitness", output)
 
-    def test_all_priority_colors(self):
-        """Each priority level should use its specific color code."""
-        formatter = PromptFormatter(use_colors=True)
-        expected_colors = {
-            Priority.CRITICAL: "\033[91m",
-            Priority.HIGH: "\033[93m",
-            Priority.MEDIUM: "\033[94m",
-            Priority.LOW: "\033[92m",
-            Priority.INFO: "\033[90m",
-        }
-        for priority, color in expected_colors.items():
+    def test_all_priorities_plain_text(self):
+        """Each priority level should render as plain text with no ANSI codes."""
+        formatter = PromptFormatter()
+        for priority in Priority:
             p = Prompt(
                 perspective=Perspective.USER,
                 priority=priority,
@@ -192,12 +187,13 @@ class TestPromptFormatter(unittest.TestCase):
                 description="desc",
             )
             output = formatter.format_prompt(p)
-            self.assertIn(color, output,
-                          f"Missing color {color!r} for {priority.name}")
+            self.assertNotIn("\033[", output,
+                             f"ANSI code found for {priority.name}")
+            self.assertIn(f"[{priority.name}]", output)
 
     def test_format_prompt_with_all_fields(self):
         """Prompt with all fields populated."""
-        formatter = PromptFormatter(use_colors=False)
+        formatter = PromptFormatter()
         p = Prompt(
             perspective=Perspective.SYSTEM,
             priority=Priority.HIGH,
@@ -221,7 +217,7 @@ class TestPromptFormatter(unittest.TestCase):
 
     def test_format_prompt_no_acceptance_criteria(self):
         """Prompt without acceptance criteria should not show that section."""
-        formatter = PromptFormatter(use_colors=False)
+        formatter = PromptFormatter()
         p = Prompt(
             perspective=Perspective.USER,
             priority=Priority.MEDIUM,
@@ -232,7 +228,7 @@ class TestPromptFormatter(unittest.TestCase):
         self.assertNotIn("Acceptance Criteria", output)
 
     def test_format_header_embryonic_stage(self):
-        formatter = PromptFormatter(use_colors=False)
+        formatter = PromptFormatter()
         state = OrganismState(generation=0)
         output = formatter.format_header(Perspective.TEST, 0.5, state)
         self.assertIn("TEST", output)
@@ -240,7 +236,7 @@ class TestPromptFormatter(unittest.TestCase):
         self.assertIn("50.00%", output)
 
     def test_format_header_homeostasis_stage(self):
-        formatter = PromptFormatter(use_colors=False)
+        formatter = PromptFormatter()
         state = OrganismState(generation=25)
         output = formatter.format_header(Perspective.SYSTEM, 0.95, state)
         self.assertIn("homeostasis", output)
@@ -248,7 +244,7 @@ class TestPromptFormatter(unittest.TestCase):
 
     def test_format_summary_all_priority_counts(self):
         """Summary should list each priority type with count."""
-        formatter = PromptFormatter(use_colors=False)
+        formatter = PromptFormatter()
         state = OrganismState()
         state.fitness_scores = {"user": 0.5}
         prompts = [

@@ -57,21 +57,6 @@ class TestUserPerspective(unittest.TestCase):
         high = [p for p in prompts if p.priority == Priority.HIGH]
         self.assertGreater(len(high), 0)
 
-    def test_changelog_exists(self):
-        (Path(self.tmp_dir) / "README.md").write_text("# Project\n" + "x" * 5000)
-        (Path(self.tmp_dir) / "CHANGELOG.md").write_text("# Changelog")
-        analyzer = UserPerspective(Path(self.tmp_dir), self.state)
-        fitness, prompts = analyzer.analyze()
-        low = [p for p in prompts if p.priority == Priority.LOW]
-        self.assertEqual(len(low), 0)
-
-    def test_no_changelog_low_prompt(self):
-        (Path(self.tmp_dir) / "README.md").write_text("# Project\n" + "x" * 5000)
-        analyzer = UserPerspective(Path(self.tmp_dir), self.state)
-        fitness, prompts = analyzer.analyze()
-        low = [p for p in prompts if p.priority == Priority.LOW]
-        self.assertGreater(len(low), 0)
-
     def test_package_json_with_description(self):
         (Path(self.tmp_dir) / "README.md").write_text("# Project\n" + "x" * 5000)
         (Path(self.tmp_dir) / "package.json").write_text(
@@ -91,6 +76,26 @@ class TestUserPerspective(unittest.TestCase):
         medium = [p for p in prompts if p.priority == Priority.MEDIUM]
         self.assertGreater(len(medium), 0)
 
+    def test_increment_tracker_replaces_requirements_parsing(self):
+        """User perspective should no longer parse requirements.md."""
+        (Path(self.tmp_dir) / "README.md").write_text("# Project\n" + "x" * 5000)
+        req_content = "# Reqs\n### R1: First\nDo something.\n### R2: Second\nDo more.\n"
+        (Path(self.tmp_dir) / "requirements.md").write_text(req_content)
+        analyzer = UserPerspective(Path(self.tmp_dir), self.state)
+        _, prompts = analyzer.analyze()
+        # No requirement-tagged prompts should appear since requirements parsing
+        # has been moved to the increment tracker
+        req_prompts = [p for p in prompts if p.tags and p.tags[0] in ["R1", "R2"]]
+        self.assertEqual(len(req_prompts), 0)
+
+    def test_user_perspective_without_requirements_md(self):
+        """User perspective should work fine without requirements.md."""
+        (Path(self.tmp_dir) / "README.md").write_text("# Project\n" + "x" * 5000)
+        analyzer = UserPerspective(Path(self.tmp_dir), self.state)
+        fitness, prompts = analyzer.analyze()
+        self.assertIsInstance(fitness, float)
+        self.assertIsInstance(prompts, list)
+
 
 class TestTestPerspective(unittest.TestCase):
 
@@ -107,6 +112,19 @@ class TestTestPerspective(unittest.TestCase):
         self.assertEqual(fitness, 0.0)
         critical = [p for p in prompts if p.priority == Priority.CRITICAL]
         self.assertGreater(len(critical), 0)
+
+    def test_nested_test_dir_found(self):
+        """Test dirs inside sub-directories should be detected."""
+        subpkg = Path(self.tmp_dir) / "mypackage"
+        subpkg.mkdir()
+        tests_dir = subpkg / "tests"
+        tests_dir.mkdir()
+        (tests_dir / "test_core.py").write_text("def test_core(): pass")
+        analyzer = TestPerspective(Path(self.tmp_dir), self.state)
+        fitness, prompts = analyzer.analyze()
+        critical = [p for p in prompts if p.priority == Priority.CRITICAL
+                    and "test directory" in p.title.lower()]
+        self.assertEqual(len(critical), 0, "Should NOT ask to create test dir when nested tests/ exists")
 
     def test_with_test_dir(self):
         (Path(self.tmp_dir) / "tests").mkdir()

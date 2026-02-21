@@ -184,6 +184,16 @@ class TestCodeAnalyzer(unittest.TestCase):
         root_files = [k for k in results if "root_module" in k]
         self.assertEqual(len(root_files), 1)
 
+    def test_get_all_analyses_auto_discovers_subdirs(self):
+        """get_all_analyses should auto-discover subdirs with .py files."""
+        custom = Path(self.tmp_dir) / "mypackage"
+        custom.mkdir()
+        (custom / "core.py").write_text("def main(): pass")
+        (custom / "helpers.py").write_text("def helper(): pass")
+        results = self.analyzer.get_all_analyses()
+        discovered = [k for k in results if "mypackage" in k]
+        self.assertEqual(len(discovered), 2)
+
     def test_high_complexity_issue(self):
         """Files with complexity > COMPLEXITY_THRESHOLD get an issue."""
         lines = ["def func():"]

@@ -5,7 +5,15 @@ A system that analyzes codebase state and generates prompts from multiple perspe
 Inspired by biological development principles and lateral thinking.
 
 This module serves as the main entry point and orchestrator, combining all
-sub-modules: models, analyzers, perspectives, diagnostics, and formatters.
+sub-modules: models, analyzers, perspectives, diagnostics, formatters,
+and the increment tracker.
+
+Workflow (increment-driven loop):
+  1. ./develop.sh  →  output the current TODO increment with injected principles
+  2. User implements the requirement
+  3. git add -A && git commit -m "INCREMENT XXXX: desc" && git push
+  4. ./develop.sh  →  verify & mark done, output next increment
+  5. Repeat until all increments are completed
 """
 
 import argparse
@@ -17,8 +25,6 @@ from typing import List
 from models import (  # noqa: F401
     ROOT_DIR,
     STATE_FILE,
-    REQUIREMENTS_FILE,
-    PRINCIPLES_FILE,
     ANALYZABLE_DIRS,
     TEST_DIRS,
     COMPLEXITY_THRESHOLD,
@@ -42,6 +48,7 @@ from user_perspective import UserPerspective  # noqa: F401
 from diagnostics import AnalyticsPerspective, DebugPerspective  # noqa: F401
 
 from formatters import PromptFormatter  # noqa: F401
+from increment_tracker import IncrementTracker  # noqa: F401
 
 
 class SelfDevelopmentOrganism:
@@ -133,29 +140,121 @@ class SelfDevelopmentOrganism:
 
         print(self.formatter.format_summary(self.state, displayed_prompts))
 
+        # Store all collected prompts for use by advance_generation
+        self._last_all_prompts = all_prompts
+
         return displayed_prompts
 
+    @staticmethod
+    def _run_tests(root_dir: Path) -> tuple:
+        """Run project tests and return (success: bool, output: str).
+
+        Tries pytest first; falls back to unittest discover.
+        """
+        import subprocess
+        test_dir = root_dir / "selfdev" / "tests"
+        if not test_dir.exists():
+            # Fallback: look for tests/ at root
+            test_dir = root_dir / "tests"
+        if not test_dir.exists():
+            return True, "No test directory found — skipping."
+
+        # Try pytest first
+        try:
+            result = subprocess.run(
+                ["python3", "-m", "pytest", str(test_dir), "-q", "--tb=short"],
+                cwd=root_dir,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            # If pytest is not installed, returncode is non-zero and stderr
+            # contains "No module named pytest".  Fall through to unittest.
+            if "No module named pytest" not in (result.stderr or ""):
+                passed = result.returncode == 0
+                output = (result.stdout + result.stderr).strip()
+                return passed, output
+        except FileNotFoundError:
+            pass  # python3 not found on PATH — try unittest below
+
+        # Fallback: unittest discover
+        try:
+            result = subprocess.run(
+                ["python3", "-m", "unittest", "discover",
+                 "-s", str(test_dir), "-q"],
+                cwd=root_dir,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            passed = result.returncode == 0
+            output = (result.stdout + result.stderr).strip()
+            return passed, output
+        except FileNotFoundError:
+            return True, "python3 not found — skipping test check."
+        except Exception as exc:
+            return False, f"Test runner error: {exc}"
+
     def advance_generation(self):
-        """Advance to next generation"""
+        """Advance to next generation.
+
+        Verifies the current TODO increment:
+          - Tests must pass before an increment is marked done.
+          - Changed files are listed for traceability.
+        Then renames it to done, records fitness history, and outputs
+        the next increment.
+        """
+        tracker = IncrementTracker(self.root_dir)
+        current = tracker.current_todo()
+
+        if current is None:
+            print("\n  ★ ALL INCREMENTS COMPLETED — nothing to advance.")
+            return
+
+        # Gate: tests must pass before advancing
+        tests_ok, test_output = self._run_tests(self.root_dir)
+        if not tests_ok:
+            print("\n  ✗ CANNOT ADVANCE — tests are failing.")
+            print("    Fix the failures below before re-running develop.sh:\n")
+            print(test_output)
+            return
+
+        # Mark the current increment as done
+        done_path = tracker.mark_done(current)
+        inc = tracker.parse_increment(done_path)
+
+        # Record fitness history
         scores = dict(self.state.fitness_scores)
         if scores:
             scores["overall"] = sum(scores.values()) / len(scores)
         self.state.fitness_history.append({
             "generation": self.state.generation,
             "timestamp": datetime.now(timezone.utc).isoformat(),
+            "increment": inc["number"],
             **scores
         })
 
         git_analyzer = GitAnalyzer(self.root_dir)
         self.state.last_git_hash = git_analyzer.get_current_hash()
+        changed_files = git_analyzer.get_changed_files_in_last_commit()
 
         self.state.generation += 1
         self.state.development_stage = self.state.get_stage().value
 
-        self.state.save(STATE_FILE)
+        # Print done summary with traceability
+        next_todo = tracker.current_todo()
+        print(tracker.format_done_summary(done_path, next_todo,
+                                          changed_files=changed_files))
 
-        print(f"\nAdvanced to Generation {self.state.generation}")
-        print(f"Development Stage: {self.state.development_stage}")
+        # Print next increment prompt (if any) and track it
+        if next_todo:
+            print(tracker.format_increment_prompt(next_todo))
+            next_inc = tracker.parse_increment(next_todo)
+            self.state.last_increment_shown = next_inc["number"]
+        else:
+            self.state.last_increment_shown = 0
+
+        self.state.save(STATE_FILE)
 
     def print_state(self):
         """Print current organism state"""
@@ -190,7 +289,12 @@ def main():
     parser.add_argument("--all", action="store_true", help="Run all perspectives")
     parser.add_argument("--state", action="store_true", help="Show current state")
     parser.add_argument("--advance", action="store_true", help="Advance to next generation")
-    parser.add_argument("--no-color", action="store_true", help="Disable colored output")
+    parser.add_argument("--revert", type=str, default=None,
+                        help="Generate prompt to revert increment (e.g. --revert=0001)")
+    parser.add_argument("--revert_from", type=str, default=None,
+                        help="Generate prompt to revert from increment to current todo (e.g. --revert_from=0020)")
+    parser.add_argument("--redo", type=str, default=None,
+                        help="Generate prompt to revert and re-implement increment (e.g. --redo=0001)")
     parser.add_argument("--root", type=str, default=None,
                         help="Root directory to analyze (default: parent directory)")
     parser.add_argument("--selfdev", action="store_true",
@@ -207,9 +311,6 @@ def main():
 
     organism = SelfDevelopmentOrganism(root_dir=root_dir)
 
-    if args.no_color:
-        organism.formatter.use_colors = False
-
     if args.state:
         organism.print_state()
         return
@@ -218,6 +319,27 @@ def main():
         organism.advance_generation()
         return
 
+    # --- Revert / Redo modes ---
+    if args.revert:
+        tracker = IncrementTracker(root_dir)
+        increment_num = int(args.revert)
+        print(tracker.format_revert_prompt(increment_num))
+        return
+
+    if args.revert_from:
+        tracker = IncrementTracker(root_dir)
+        from_num = int(args.revert_from)
+        print(tracker.format_revert_from_prompt(from_num))
+        return
+
+    if args.redo:
+        tracker = IncrementTracker(root_dir)
+        increment_num = int(args.redo)
+        print(tracker.format_redo_prompt(increment_num))
+        return
+
+    # --- Increment-driven mode (default) ---
+    # If no specific perspective is requested, show the current increment.
     perspectives_to_run = []
 
     if args.user:
@@ -231,10 +353,8 @@ def main():
     if args.debug:
         perspectives_to_run.append(Perspective.DEBUG)
 
-
-    if args.all or not perspectives_to_run:
-        organism.run_all_perspectives()
-    else:
+    if perspectives_to_run:
+        # Explicit perspective mode — run selected perspectives
         all_prompts = []
         for perspective in perspectives_to_run:
             prompts = organism.run_perspective(perspective)
@@ -242,8 +362,32 @@ def main():
 
         if len(perspectives_to_run) > 1:
             print(organism.formatter.format_summary(organism.state, all_prompts))
+    elif args.all:
+        organism.run_all_perspectives()
+    else:
+        # Default: verify previous increment (if already shown) & show next
+        tracker = IncrementTracker(root_dir)
+        current = tracker.current_todo()
 
-    organism.state.save(STATE_FILE)
+        if current is None:
+            print("\n  ★ ALL INCREMENTS COMPLETED!")
+            print("    Run with --all to see full perspective analysis.\n")
+            organism.state.save(STATE_FILE)
+            return
+
+        inc_data = tracker.parse_increment(current)
+        current_num = inc_data["number"]
+
+        if organism.state.last_increment_shown == current_num:
+            # Already showed this increment — advance it
+            organism.advance_generation()
+        else:
+            # First time seeing this increment — show it
+            print(tracker.format_increment_prompt(current))
+            organism.state.last_increment_shown = current_num
+            organism.state.save(STATE_FILE)
+
+    return
 
 
 if __name__ == "__main__":

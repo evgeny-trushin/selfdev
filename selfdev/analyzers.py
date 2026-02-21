@@ -96,13 +96,34 @@ class CodeAnalyzer:
         return results
 
     def get_all_analyses(self) -> Dict[str, FileAnalysis]:
-        """Analyze all relevant directories"""
+        """Analyze all relevant directories.
+
+        Scans pre-defined directory names *and* auto-discovers any
+        immediate sub-directory of *root_dir* that contains ``.py``
+        files (e.g. ``selfdev/``).
+        """
         all_results = {}
+
+        scanned: set = set()
 
         for dir_name in ANALYZABLE_DIRS + TEST_DIRS:
             dir_path = self.root_dir / dir_name
-            results = self.analyze_directory(dir_path)
-            all_results.update(results)
+            if dir_path.is_dir():
+                scanned.add(dir_path.resolve())
+                results = self.analyze_directory(dir_path)
+                all_results.update(results)
+
+        # Auto-discover sub-directories containing Python files
+        for child in sorted(self.root_dir.iterdir()):
+            if not child.is_dir() or child.name.startswith("."):
+                continue
+            resolved = child.resolve()
+            if resolved in scanned:
+                continue
+            if any(child.rglob("*.py")):
+                scanned.add(resolved)
+                results = self.analyze_directory(child)
+                all_results.update(results)
 
         for file_path in self.root_dir.glob("*.py"):
             analysis = self.analyze_file(file_path)
@@ -179,3 +200,88 @@ class GitAnalyzer:
             return result.stdout.strip()
         except Exception:
             return "unknown"
+
+    def get_changed_files_in_last_commit(self) -> List[str]:
+        """Return list of files changed in the most recent commit."""
+        try:
+            result = subprocess.run(
+                ["git", "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"],
+                cwd=self.root_dir,
+                capture_output=True,
+                text=True,
+            )
+            return [f for f in result.stdout.strip().split("\n") if f.strip()]
+        except Exception:
+            return []
+
+    def get_commits_for_increment(self, increment_number: int) -> List[Dict]:
+        """Return commits whose message mentions the given increment number.
+
+        Searches for patterns like ``INCREMENT 0001`` or ``increment_0001``
+        in the git log.
+        """
+        tag = f"INCREMENT {increment_number:04d}"
+        tag_alt = f"increment_{increment_number:04d}"
+        try:
+            result = subprocess.run(
+                ["git", "log", "--all", "--pretty=format:%H|%s|%ad",
+                 "--date=iso", f"--grep={tag}"],
+                cwd=self.root_dir,
+                capture_output=True,
+                text=True,
+            )
+            lines = result.stdout.strip().split("\n") if result.stdout.strip() else []
+            # Also search the alternative tag
+            result2 = subprocess.run(
+                ["git", "log", "--all", "--pretty=format:%H|%s|%ad",
+                 "--date=iso", f"--grep={tag_alt}"],
+                cwd=self.root_dir,
+                capture_output=True,
+                text=True,
+            )
+            lines2 = result2.stdout.strip().split("\n") if result2.stdout.strip() else []
+
+            seen_hashes = set()
+            commits = []
+            for line in lines + lines2:
+                if "|" not in line:
+                    continue
+                parts = line.split("|", 2)
+                h = parts[0]
+                if h in seen_hashes:
+                    continue
+                seen_hashes.add(h)
+                commits.append({
+                    "hash": h,
+                    "message": parts[1] if len(parts) > 1 else "",
+                    "date": parts[2] if len(parts) > 2 else "",
+                })
+            return commits
+        except Exception:
+            return []
+
+    def get_diff_for_commit(self, commit_hash: str) -> str:
+        """Return the diff introduced by a specific commit."""
+        try:
+            result = subprocess.run(
+                ["git", "diff", f"{commit_hash}~1", commit_hash,
+                 "--stat"],
+                cwd=self.root_dir,
+                capture_output=True,
+                text=True,
+            )
+            return result.stdout.strip()
+        except Exception:
+            return ""
+
+    def get_commits_in_range(self, from_increment: int,
+                             to_increment: int) -> List[Dict]:
+        """Return commits for all increments in the range [from, to]."""
+        all_commits: List[Dict] = []
+        seen: set = set()
+        for num in range(from_increment, to_increment + 1):
+            for c in self.get_commits_for_increment(num):
+                if c["hash"] not in seen:
+                    seen.add(c["hash"])
+                    all_commits.append(c)
+        return all_commits

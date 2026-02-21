@@ -15,8 +15,8 @@ from enum import Enum
 SELFDEV_DIR = Path(__file__).resolve().parent
 ROOT_DIR = SELFDEV_DIR.parent  # default: analyze the project (../), not selfdev itself
 STATE_FILE = ROOT_DIR / "organism_state.json"
-REQUIREMENTS_FILE = ROOT_DIR / "requirements.md"
-PRINCIPLES_FILE = ROOT_DIR / "principles.md"
+REQUIREMENTS_DIR = ROOT_DIR / "requirements"
+PRINCIPLES_DIR = ROOT_DIR / "principles"
 
 # Directories to analyze
 ANALYZABLE_DIRS = ["src", "components", "pages", "lib", "utils", "services"]
@@ -97,8 +97,7 @@ class OrganismState:
     prompts_generated: int = 0
     prompts_completed: int = 0
     last_git_hash: str = ""
-    requirements_last_checked: str = ""
-    principles_last_checked: str = ""
+    last_increment_shown: int = 0
 
     @classmethod
     def load(cls, path: Path) -> "OrganismState":
