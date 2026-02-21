@@ -2,6 +2,109 @@
 
 A biological-inspired code evolution system that analyzes your codebase from multiple perspectives and generates actionable development prompts. Uses lateral thinking principles and embryomorphic engineering to guide software development.
 
+## AI Cloud Agent Use Cases
+
+You can supercharge your workflow by giving these one-liner prompts to any AI cloud agent (GitHub Copilot, Claude, ChatGPT, Gemini, etc.). Each prompt is self-contained — just paste it into your agent's chat.
+
+---
+
+### Getting Started — Bootstrap Self-Development for Any Project
+
+**Use Case A1: Initialize selfdev for your project with custom principles**
+> "Clone https://github.com/evgeny-trushin/selfdev, and using your project data create `principles.md` and `requirements.md` tailored to your project. Verify that `selfdev/develop.sh` works correctly with the created files. Do not execute the generated prompts."
+
+**Use Case A2: Add selfdev to an existing project and run first analysis**
+> "Clone https://github.com/evgeny-trushin/selfdev into my current project as a subfolder, run `./selfdev/develop.sh`, read the generated prompts, and implement the top 3 highest-priority ones"
+
+**Use Case A3: Generate a project-specific requirements.md**
+> "Clone https://github.com/evgeny-trushin/selfdev, analyze my current codebase, and generate a requirements.md that maps my project's features to selfdev's R1-R5 requirement format with fitness metrics tailored to my domain"
+
+---
+
+### Continuous Evolution — Daily Development Workflow
+
+**Use Case B1: Morning dev kickoff — analyze and implement**
+> "Run `./selfdev/develop.sh` in my project, read all generated prompts, pick the 3 with the highest impact-to-effort ratio, implement them, then run `./selfdev/develop.sh --advance` to record the new generation"
+
+**Use Case B2: Pre-PR quality gate**
+> "Run `./selfdev/develop.sh --test --debug --system` on my current branch, fix any CRITICAL or HIGH issues found, add tests for uncovered code it identifies, and show me the before/after fitness scores"
+
+**Use Case B3: Technical debt sprint**
+> "Run `./selfdev/develop.sh --system`, collect all refactoring prompts, sort by complexity score, then refactor the top 5 most complex files — split large files, extract functions, reduce McCabe complexity below 10"
+
+**Use Case B4: Documentation catch-up**
+> "Run `./selfdev/develop.sh --user`, implement every documentation prompt it generates — add missing README sections, docstrings for public functions, usage examples, and a CHANGELOG entry for recent changes"
+
+---
+
+### Architecture & Code Quality
+
+**Use Case C1: Full codebase health report**
+> "Run `./selfdev/develop.sh --state` and all 5 perspectives (--user --test --system --analytics --debug) on my project, then create a markdown report summarizing fitness scores, top issues per perspective, and a prioritized action plan"
+
+**Use Case C2: Reduce coupling and improve cohesion**
+> "Run `./selfdev/develop.sh --system`, identify modules with high coupling (imports from many other modules), and refactor them to use dependency injection or interfaces. Show the before/after complexity metrics"
+
+**Use Case C3: Dead code cleanup (Apoptosis)**
+> "Run `./selfdev/develop.sh --debug --system`, find all dead code, unused imports, unreachable functions, and obsolete tests, remove them, verify tests still pass, then advance the generation"
+
+---
+
+### Testing & Quality Assurance
+
+**Use Case D1: Close the test coverage gap**
+> "Run `./selfdev/develop.sh --test`, for every source file it flags as untested, generate comprehensive unit tests covering happy paths, edge cases, and error handling. Target 80% coverage"
+
+**Use Case D2: Mutation testing preparation**
+> "Run `./selfdev/develop.sh --test` to find weakly tested code, then strengthen those tests so they would catch mutations — add assertions for return values, side effects, and boundary conditions"
+
+**Use Case D3: End-to-end test generation from user perspective**
+> "Run `./selfdev/develop.sh --user --test`, identify the critical user journeys, and create integration/e2e tests for each one. Include setup, action, and assertion steps"
+
+---
+
+### CI/CD & DevOps Integration
+
+**Use Case E1: Add selfdev to CI pipeline**
+> "Clone https://github.com/evgeny-trushin/selfdev into my project, create a GitHub Actions workflow that runs `./selfdev/develop.sh --test --debug --system` on every PR, fails if any CRITICAL issues exist, and posts the fitness scores as a PR comment"
+
+**Use Case E2: Pre-commit hook setup**
+> "Clone https://github.com/evgeny-trushin/selfdev, set up a git pre-commit hook that runs `./selfdev/develop.sh --debug` and blocks the commit if CRITICAL or HIGH severity issues are found. Make it fast by only scanning changed files"
+
+**Use Case E3: Release readiness automation**
+> "Run `./selfdev/develop.sh` with all perspectives, check that all fitness scores are above 0.7, generate a release notes draft from the fitness history and recent prompts, and tag the release if all checks pass"
+
+---
+
+### AI-Augmented Evolution
+
+**Use Case F1: Multi-generation sprint**
+> "Run 3 generations of selfdev evolution on my project: for each generation, run `./selfdev/develop.sh`, implement all HIGH priority prompts, verify tests pass, then `./selfdev/develop.sh --advance`. Show the fitness progression across all 3 generations"
+
+**Use Case F2: Cross-perspective conflict resolution**
+> "Run all 5 selfdev perspectives, identify any conflicting recommendations (e.g., system says split file but user says keep unified API), analyze the trade-offs, and implement the solution that maximizes overall fitness"
+
+**Use Case F3: Custom perspective creation**
+> "Read selfdev/organism.py, create a new Security perspective that scans for hardcoded secrets, SQL injection patterns, unsafe deserialization, and missing input validation. Register it as `./selfdev/develop.sh --security` and add tests"
+
+**Use Case F4: Fitness regression investigation**
+> "Run `./selfdev/develop.sh --state`, compare current fitness scores with the previous generation in organism_state.json, identify which perspectives regressed, run those specific perspectives, and implement fixes to restore fitness above the previous level"
+
+---
+
+### Project-Specific Adaptations
+
+**Use Case G1: Adapt selfdev for a monorepo**
+> "Clone https://github.com/evgeny-trushin/selfdev, modify it to run independently on each package in my monorepo (packages/*/), generate a per-package fitness report, and a combined organism-level fitness summary"
+
+**Use Case G2: Adapt selfdev for a data science project**
+> "Clone https://github.com/evgeny-trushin/selfdev, customize the perspectives for a data science workflow: User → notebook documentation, Test → data validation & model accuracy, System → pipeline complexity, Analytics → experiment tracking, Debug → data quality issues"
+
+**Use Case G3: Adapt selfdev for infrastructure-as-code**
+> "Clone https://github.com/evgeny-trushin/selfdev, adapt perspectives for Terraform/Ansible: User → module documentation, Test → plan validation, System → resource complexity & blast radius, Analytics → drift detection, Debug → state inconsistencies"
+
+---
+
 ## Quick Start
 
 ```bash
