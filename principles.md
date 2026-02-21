@@ -8,19 +8,20 @@ Before generating prompts, question the obvious:
 - What if we approached this problem from the opposite direction?
 - Are we solving the right problem?
 
+
 ### P2: Random Entry Point
 Each perspective starts from a different "entry point" into the codebase:
-- User: Starts from features and works backward to implementation
+- User: Starts from the portfolio visitor's first impression and works backward to implementation
 - Test: Starts from edge cases and works toward happy paths
-- System: Starts from dependencies and works toward core logic
-- Analytics: Starts from outcomes and works toward causes
-- Debug: Starts from symptoms and works toward root causes
+- System: Starts from infrastructure dependencies (S3, CloudFront, Route53) and works toward content
+- Analytics: Starts from recruiter/client outcomes and works toward causes
+- Debug: Starts from symptoms (broken links, stale data, deployment failures) and works toward root causes
 
 ### P3: Escape Patterns
 Recognize and escape from local optima:
-- If tests pass but users complain, user perspective takes precedence
-- If code is clean but slow, system perspective flags performance
-- If everything works but nobody uses it, analytics perspective triggers redesign
+- If tests pass but visitors bounce, user perspective takes precedence
+- If code is clean but loads slowly, system perspective flags performance
+- If everything works but nobody contacts, analytics perspective triggers conversion redesign
 
 ## Biological Development Principles
 
@@ -34,8 +35,9 @@ Critical Bugs    Minor Issues    Nice-to-haves
 ### B2: Differentiation Over Time
 As the system matures, perspectives specialize:
 - Generation 0-3: All perspectives focus on survival (basic functionality)
-- Generation 4-10: Perspectives begin specializing (optimization)
-- Generation 11+: Perspectives reach homeostasis (maintenance mode)
+- Generation 4-10: Perspectives begin specializing (feature completeness, robustness)
+- Generation 11-20: Perspectives refine (optimization, analytics-driven iteration)
+- Generation 21+: Perspectives reach homeostasis (maintenance, reliability)
 
 ### B3: Apoptosis (Programmed Death)
 Remove what doesn't serve the organism:
@@ -55,6 +57,8 @@ Positive feedback for growth:
 - Good test coverage enables refactoring prompts
 - Clean architecture enables optimization prompts
 
+
+
 ## Prompt Generation Principles
 
 ### G1: Context-Aware
@@ -64,10 +68,13 @@ Every prompt includes:
 - Historical trend
 - Specific action requested
 
+
 ### G2: Actionable
 Prompts must be immediately actionable:
 - BAD: "Improve test coverage"
 - GOOD: "Add tests for UserService.authenticate() - currently 0% covered"
+- BAD: "Update portfolio"
+- GOOD: "Add missing error handling to api_client.py"
 
 ### G3: Prioritized
 Prompts are ranked by:
@@ -75,6 +82,7 @@ Prompts are ranked by:
 2. Effort required
 3. Dependencies on other changes
 4. Historical success rate
+5. User impact
 
 ### G4: Measurable
 Each prompt includes acceptance criteria:
@@ -85,10 +93,10 @@ Each prompt includes acceptance criteria:
 ## Perspective-Specific Principles
 
 ### User Perspective (--user)
-- Empathy: What pain points exist?
+- Empathy: What pain points exist for users?
 - Journey: What is the user trying to accomplish?
 - Friction: Where does the experience break down?
-- Value: What delivers the most benefit?
+- Value: What delivers the most benefit to the user?
 
 ### Test Perspective (--test)
 - Coverage: What code paths are untested?
@@ -96,23 +104,29 @@ Each prompt includes acceptance criteria:
 - Mutation: Would bugs be caught?
 - Speed: Are tests fast enough for CI?
 
+
 ### System Perspective (--system)
 - Coupling: Are modules too interdependent?
 - Cohesion: Are responsibilities well-grouped?
 - Complexity: Is the code understandable?
 - Performance: Are there bottlenecks?
+- Infrastructure: Is the configuration consistent?
 
 ### Analytics Perspective (--analytics)
 - Trends: What is changing over time?
 - Patterns: What recurring issues exist?
 - Predictions: What problems are likely?
 - Correlations: What changes together?
+- Conversion: Are users completing key flows?
 
 ### Debug Perspective (--debug)
 - Symptoms: What errors are occurring?
 - Traces: Where do errors originate?
 - Frequency: How often do issues happen?
 - Severity: What is the impact?
+
+
+
 
 ## Evolution Principles
 
@@ -170,7 +184,6 @@ Before writing any solution, complete internal Q&A:
 
 ### D2: Required Cognitive Behaviors
 
-**Question-Answering**
 - Ask "Why would we need...?"
 - Ask "What if the input is...?"
 - Answer each question explicitly before proceeding
@@ -178,6 +191,7 @@ Before writing any solution, complete internal Q&A:
 **Perspective Shift**
 - Say "Let me try a different approach..."
 - Say "Alternatively, we could..."
+- Say "From a user's perspective, this would..."
 - Explore at least 2 different approaches
 
 **Conflict Detection**
