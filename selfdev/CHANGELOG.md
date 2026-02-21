@@ -18,6 +18,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 
 
+
+### Adapted (2026-02-21)
+- **Auto-adapted** to foundational document changes detected at 2026-02-21T19:16:29+00:00.
+- **requirements.md** changes:
+  - 1030f13e 2026-02-21T20:37:32+11:00 fix: update prompt filtering logic and correct last_updated timestamp in organism_state.json
+- **principles.md** changes:
+  - 1030f13e 2026-02-21T20:37:32+11:00 fix: update prompt filtering logic and correct last_updated timestamp in organism_state.json
+
+
 ### Adapted (2026-02-21)
 - **Auto-adapted** to foundational document changes detected at 2026-02-21T11:52:49+00:00.
 - **requirements.md** changes:

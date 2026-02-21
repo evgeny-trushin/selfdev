@@ -10,7 +10,8 @@ from unittest.mock import patch, MagicMock
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from analyzers import CodeAnalyzer, GitAnalyzer
+from analyzers import CodeAnalyzer
+from git_analyzer import GitAnalyzer
 
 
 class TestCodeAnalyzer(unittest.TestCase):
@@ -248,14 +249,14 @@ class TestGitAnalyzer(unittest.TestCase):
             branch = analyzer.get_branch()
             self.assertIn(branch, ["", "unknown"])
 
-    @patch("analyzers.subprocess.run")
+    @patch("git_analyzer.subprocess.run")
     def test_get_current_hash_mock(self, mock_run):
         mock_run.return_value = MagicMock(stdout="abcdef1234567890\n")
         analyzer = GitAnalyzer(Path("/fake"))
         h = analyzer.get_current_hash()
         self.assertEqual(h, "abcdef12")
 
-    @patch("analyzers.subprocess.run")
+    @patch("git_analyzer.subprocess.run")
     def test_get_recent_commits_mock(self, mock_run):
         mock_run.return_value = MagicMock(
             stdout="abc12345|fix bug|2026-01-01\ndef67890|add feature|2026-01-02"
@@ -265,20 +266,20 @@ class TestGitAnalyzer(unittest.TestCase):
         self.assertEqual(len(commits), 2)
         self.assertEqual(commits[0]["message"], "fix bug")
 
-    @patch("analyzers.subprocess.run")
+    @patch("git_analyzer.subprocess.run")
     def test_get_uncommitted_mock(self, mock_run):
         mock_run.return_value = MagicMock(stdout=" M file.py\n?? new.py\n")
         analyzer = GitAnalyzer(Path("/fake"))
         changes = analyzer.get_uncommitted_changes()
         self.assertEqual(len(changes), 2)
 
-    @patch("analyzers.subprocess.run")
+    @patch("git_analyzer.subprocess.run")
     def test_get_branch_mock(self, mock_run):
         mock_run.return_value = MagicMock(stdout="feature/test\n")
         analyzer = GitAnalyzer(Path("/fake"))
         self.assertEqual(analyzer.get_branch(), "feature/test")
 
-    @patch("analyzers.subprocess.run")
+    @patch("git_analyzer.subprocess.run")
     def test_exception_handling(self, mock_run):
         mock_run.side_effect = Exception("git not found")
         analyzer = GitAnalyzer(Path("/fake"))

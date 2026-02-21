@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from models import OrganismState, Perspective
-from analyzers import GitAnalyzer
+from git_analyzer import GitAnalyzer
 from organism import SelfDevelopmentOrganism
 
 
@@ -102,7 +102,7 @@ class TestSelfDevelopmentOrganism(unittest.TestCase):
         prompts = organism.run_perspective(Perspective.DEBUG)
         self.assertEqual(len(prompts), 0)
 
-    @patch("organism.GitAnalyzer")
+    @patch("core.GitAnalyzer")
     def test_advance_generation_records_git_hash(self, mock_git_cls):
         mock_git_cls.return_value = _mock_git_analyzer()
         organism = SelfDevelopmentOrganism(root_dir=Path(self.tmp_dir))
