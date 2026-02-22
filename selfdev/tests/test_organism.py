@@ -299,6 +299,32 @@ class TestCLI(unittest.TestCase):
                 self.assertIn(name, result.stdout)
             self.assertIn("SUMMARY", result.stdout)
 
+    def test_multi_perspective_validation_execution(self):
+        """Verify that run_all_perspectives executes all perspectives and returns prompts."""
+        with tempfile.TemporaryDirectory() as d:
+            organism = SelfDevelopmentOrganism(root_dir=Path(d))
+            mock_git = _mock_git_analyzer()
+            for p in organism.perspectives.values():
+                p.git_analyzer = mock_git
+
+            # Run all perspectives
+            prompts = organism.run_all_perspectives()
+
+            # Check that we got a list of prompts (can be empty if no issues found)
+            self.assertIsInstance(prompts, list)
+
+            # Check that fitness scores for all perspectives are populated
+            expected_perspectives = {
+                Perspective.USER.value,
+                Perspective.TEST.value,
+                Perspective.SYSTEM.value,
+                Perspective.ANALYTICS.value,
+                Perspective.DEBUG.value
+            }
+            computed_perspectives = set(organism.state.fitness_scores.keys())
+            self.assertTrue(expected_perspectives.issubset(computed_perspectives),
+                            f"Expected {expected_perspectives} to be in {computed_perspectives}")
+
 
 if __name__ == "__main__":
     unittest.main()
