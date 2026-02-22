@@ -6,7 +6,8 @@ Inspired by biological development principles and lateral thinking.
 
 This module serves as the main entry point and orchestrator, combining all
 sub-modules: models, analyzers, perspectives, diagnostics, formatters,
-and the increment tracker.
+and the increment tracker. It supports multi-perspective validation (User,
+Test, System, Analytics, Debug).
 
 Workflow (increment-driven loop):
   1. ./develop.sh  →  output the current TODO increment with injected principles
