@@ -48,6 +48,13 @@ class TestPerspective(PerspectiveAnalyzer):
         return Perspective.TEST
 
     def analyze(self) -> Tuple[float, List[Prompt]]:
+        """
+        Analyzes test coverage by comparing source files against test files and
+        checks for complexity in untested files.
+
+        Returns:
+            Tuple[float, List[Prompt]]: A fitness score (0.0-1.0) and list of prompts.
+        """
         prompts = []
         analyses = self.code_analyzer.get_all_analyses()
 
@@ -146,6 +153,13 @@ class SystemPerspective(PerspectiveAnalyzer):
         return Perspective.SYSTEM
 
     def analyze(self) -> Tuple[float, List[Prompt]]:
+        """
+        Analyzes system complexity and file length metrics to determine fitness
+        and generate refactoring prompts.
+
+        Returns:
+            Tuple[float, List[Prompt]]: A fitness score (0.0-1.0) and list of prompts.
+        """
         prompts = []
         analyses = self.code_analyzer.get_all_analyses()
 
