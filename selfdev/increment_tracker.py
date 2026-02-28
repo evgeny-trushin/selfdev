@@ -1,11 +1,14 @@
 """
 Increment Tracker for the Self-Development Organism system.
 
-Manages the requirements/increment_XXXX_todo_*.md ↔ done lifecycle:
-  1. Find the current TODO increment (lowest numbered _todo_ file).
+Manages the requirements/increment_XXXX-todo-*.md ↔ done lifecycle:
+  1. Find the current TODO increment (lowest numbered -todo- / _todo_ file).
   2. Read it and resolve all referenced principles from principles/.
   3. On --advance, verify the current increment, rename todo → done,
      and present the next increment with injected principles.
+
+Supports both hyphen (increment_0001-todo-name.md) and underscore
+(increment_0001_todo_name.md) separators for maximum compatibility.
 """
 
 import os
@@ -29,11 +32,26 @@ class IncrementTracker:
     # Discovery
     # ------------------------------------------------------------------
 
+    # Separator between number/status/slug — supports both - and _
+    _SEP = "[-_]"
+
     def _increment_files(self, status: str = "todo") -> List[Path]:
-        """Return sorted list of increment files matching *status* (todo|done)."""
-        pattern = str(self.requirements_dir / f"increment_*_{status}_*.md")
-        files = sorted(glob.glob(pattern))
-        return [Path(f) for f in files]
+        """Return sorted list of increment files matching *status* (todo|done).
+
+        Supports both ``increment_0001-todo-name.md`` (hyphen) and
+        ``increment_0001_todo_name.md`` (underscore) conventions.
+        """
+        # Use regex-based filtering because glob [] support varies by platform
+        pattern = re.compile(
+            rf"increment_\d+[-_]{re.escape(status)}[-_].+\.md$"
+        )
+        if not self.requirements_dir.exists():
+            return []
+        files = sorted(
+            p for p in self.requirements_dir.iterdir()
+            if p.is_file() and pattern.match(p.name)
+        )
+        return files
 
     def current_todo(self) -> Optional[Path]:
         """Return the first (lowest-numbered) TODO increment file, or None."""
@@ -85,17 +103,17 @@ class IncrementTracker:
           acceptance_criteria (list of strings), raw_content
         """
         content = path.read_text(encoding="utf-8")
-        name = path.stem  # e.g. increment_0001_todo_multi_perspective_validation
+        name = path.stem  # e.g. increment_0001-todo-knowledge-hierarchy-schema
 
         # Extract number
         num_match = re.search(r'increment_(\d+)', name)
         number = int(num_match.group(1)) if num_match else 0
 
-        # Extract status from filename
-        status = "todo" if "_todo_" in name else "done"
+        # Extract status from filename (supports both - and _ separators)
+        status = "todo" if re.search(r'[-_]todo[-_]', name) else "done"
 
-        # Extract short description from filename
-        desc_match = re.search(r'_(?:todo|done)_(.+)$', name)
+        # Extract short description from filename (supports both separators)
+        desc_match = re.search(r'[-_](?:todo|done)[-_](.+)$', name)
         short_desc = desc_match.group(1) if desc_match else ""
 
         # ----------------------------------------------------------
@@ -283,12 +301,17 @@ class IncrementTracker:
     # ------------------------------------------------------------------
 
     def mark_done(self, increment_path: Path) -> Path:
-        """Rename an increment file from _todo_ to _done_.
+        """Rename an increment file from todo to done.
 
-        Returns the new path.
+        Supports both hyphen (``-todo-``) and underscore (``_todo_``)
+        separators.  Returns the new path.
         """
         old_name = increment_path.name
-        new_name = old_name.replace("_todo_", "_done_", 1)
+        # Detect which separator style is used and replace accordingly
+        if "-todo-" in old_name:
+            new_name = old_name.replace("-todo-", "-done-", 1)
+        else:
+            new_name = old_name.replace("_todo_", "_done_", 1)
         new_path = increment_path.parent / new_name
         increment_path.rename(new_path)
         return new_path
@@ -406,7 +429,7 @@ class IncrementTracker:
             lines.append("")
 
         # Workflow reminder
-        short = inc_data['short_desc'].replace('_', ' ').title()
+        short = inc_data['short_desc'].replace('-', ' ').replace('_', ' ').title()
         commit_msg = f"INCREMENT {inc_data['number']:04d}: {short}"
         lines.append("WORKFLOW:")
         lines.append("-" * 40)
@@ -521,7 +544,7 @@ class IncrementTracker:
             lines.append("=" * 70)
 
         # Workflow with commit message
-        short = inc['short_desc'].replace('_', ' ').title()
+        short = inc['short_desc'].replace('-', ' ').replace('_', ' ').title()
         commit_msg = f"INCREMENT {inc['number']:04d}: {short}"
         lines.append("")
         lines.append("WORKFLOW:")
@@ -586,12 +609,18 @@ class IncrementTracker:
     # ------------------------------------------------------------------
 
     def _find_increment_file(self, number: int) -> Optional[Path]:
-        """Find an increment file (todo or done) by its number."""
-        for status in ("todo", "done"):
-            pattern = str(self.requirements_dir / f"increment_{number:04d}_{status}_*.md")
-            files = glob.glob(pattern)
-            if files:
-                return Path(files[0])
+        """Find an increment file (todo or done) by its number.
+
+        Supports both hyphen and underscore separators.
+        """
+        pat = re.compile(
+            rf"increment_{number:04d}[-_](?:todo|done)[-_].+\.md$"
+        )
+        if not self.requirements_dir.exists():
+            return None
+        for f in sorted(self.requirements_dir.iterdir()):
+            if f.is_file() and pat.match(f.name):
+                return f
         return None
 
     def format_revert_prompt(self, increment_number: int) -> str:
@@ -656,11 +685,14 @@ class IncrementTracker:
             lines.append(f"  5. git push")
         lines.append("")
 
-        if inc_file and "_done_" in inc_file.name:
+        if inc_file and re.search(r'[-_]done[-_]', inc_file.name):
             lines.append("POST-REVERT:")
             lines.append("-" * 40)
             lines.append(f"  Rename the increment file back to todo:")
-            todo_name = inc_file.name.replace("_done_", "_todo_", 1)
+            if "-done-" in inc_file.name:
+                todo_name = inc_file.name.replace("-done-", "-todo-", 1)
+            else:
+                todo_name = inc_file.name.replace("_done_", "_todo_", 1)
             lines.append(f"    mv {inc_file.name} {todo_name}")
             lines.append("")
 
@@ -796,7 +828,7 @@ class IncrementTracker:
                           " re-create the requirement before implementing.)")
         lines.append("")
 
-        short = inc['short_desc'].replace('_', ' ').title() if inc else f"Increment {increment_number:04d}"
+        short = inc['short_desc'].replace('-', ' ').replace('_', ' ').title() if inc else f"Increment {increment_number:04d}"
         commit_msg = f"INCREMENT {increment_number:04d}: {short} (redo)"
         lines.append("WORKFLOW:")
         lines.append("-" * 40)
