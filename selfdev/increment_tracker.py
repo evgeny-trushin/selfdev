@@ -506,9 +506,10 @@ class IncrementTracker:
         lines.append("    - Create or modify files directly related to this increment.")
         lines.append("    - Add or update tests that verify this increment.")
         lines.append("  FORBIDDEN:")
+        lines.append("    - Do NOT rename todo→done automatically. NEVER.")
         lines.append("    - Do NOT auto-advance increments by rerunning develop.sh.")
-        lines.append("    - Do NOT mark an increment done until tests pass and all")
-        lines.append("      referenced files are implemented.")
+        lines.append("    - Do NOT mark an increment done until a VERIFICATION step")
+        lines.append("      has explicitly confirmed all acceptance criteria are met.")
         lines.append("    - Do NOT modify unrelated increments or requirements.")
         lines.append("    - Do NOT skip acceptance criteria.")
         lines.append("")
@@ -520,7 +521,12 @@ class IncrementTracker:
         lines.append("    1. Implement the requirement (code changes).")
         lines.append("    2. Run tests and linter — all must pass.")
         lines.append("    3. List all changed/created files in the commit message body.")
-        lines.append("    4. Only then advance ONE step (commit & push).")
+        lines.append("    4. Commit & push.")
+        lines.append("    5. Run ./develop.sh to trigger VERIFICATION.")
+        lines.append("    6. Only after verification passes, EXPLICITLY rename")
+        lines.append(f"       {increment_path.name}")
+        lines.append(f"       from *todo* → *done* (or run ./develop.sh --advance).")
+        lines.append("    ⚠  The rename must NEVER happen automatically.")
         lines.append("")
 
         # Traceability
@@ -601,6 +607,102 @@ class IncrementTracker:
         else:
             lines.append("  ★ ALL INCREMENTS COMPLETED!")
             lines.append("")
+
+        return "\n".join(lines)
+
+    # ------------------------------------------------------------------
+    # Verification prompt
+    # ------------------------------------------------------------------
+
+    def format_verification_prompt(self, increment_path: Path) -> str:
+        """Generate a prompt that verifies implementation of the current
+        increment and explicitly asks the agent to rename todo → done.
+
+        This prompt is shown when the increment has already been presented
+        to the developer/AI.  It MUST NOT rename the file itself — the
+        agent must do so only after confirming every acceptance criterion.
+        """
+        inc = self.parse_increment(increment_path)
+        principles = self.resolve_principles(inc["related_principles"])
+        progress = self.done_count()
+        total = self.total_count()
+
+        lines: List[str] = []
+
+        # Header
+        lines.append("=" * 70)
+        lines.append(f"  🔍 VERIFICATION: INCREMENT {inc['number']:04d}")
+        lines.append(f"  {inc['title']}")
+        lines.append(f"  Requirement: {inc['requirement_id']}")
+        lines.append(f"  Progress: {progress}/{total} increments completed")
+        lines.append("=" * 70)
+        lines.append("")
+
+        # Purpose
+        lines.append("PURPOSE:")
+        lines.append("-" * 40)
+        lines.append("  This increment was already presented. Before it can be")
+        lines.append("  marked as done, you MUST verify the implementation.")
+        lines.append("  DO NOT rename the file until every check below passes.")
+        lines.append("")
+
+        # Step 1: Acceptance criteria verification
+        if inc["acceptance_criteria"]:
+            lines.append("STEP 1 — VERIFY ACCEPTANCE CRITERIA:")
+            lines.append("-" * 40)
+            lines.append("  Check each criterion against the current codebase.")
+            lines.append("  Mark ✅ only when you have confirmed the code satisfies it:")
+            lines.append("")
+            for i, criterion in enumerate(inc["acceptance_criteria"], 1):
+                lines.append(f"  [ ] {i}. {criterion}")
+            lines.append("")
+
+        # Step 2: Tests
+        lines.append("STEP 2 — RUN TESTS:")
+        lines.append("-" * 40)
+        lines.append("  python -m pytest selfdev/tests/")
+        lines.append("  ALL tests must pass. If any test fails, fix it first.")
+        lines.append("")
+
+        # Step 3: Linter
+        lines.append("STEP 3 — RUN LINTER:")
+        lines.append("-" * 40)
+        lines.append("  python -m py_compile <changed files>")
+        lines.append("  No syntax or import errors are allowed.")
+        lines.append("")
+
+        # Step 4: Explicit rename instruction
+        old_name = increment_path.name
+        if "-todo-" in old_name:
+            new_name = old_name.replace("-todo-", "-done-", 1)
+        else:
+            new_name = old_name.replace("_todo_", "_done_", 1)
+
+        lines.append("STEP 4 — RENAME (only after steps 1-3 pass):")
+        lines.append("-" * 40)
+        lines.append("  ⚠  THIS IS THE ONLY WAY TO ADVANCE THE INCREMENT.")
+        lines.append("  After ALL checks above pass, EXPLICITLY rename the file:")
+        lines.append("")
+        lines.append(f"    mv requirements/{old_name} requirements/{new_name}")
+        lines.append("")
+        lines.append("  Or equivalently run:")
+        lines.append("    ./develop.sh --advance")
+        lines.append("")
+        lines.append("  ❌ If ANY acceptance criterion is NOT met, or tests fail:")
+        lines.append("     DO NOT RENAME. Fix the issues and re-run verification.")
+        lines.append("")
+
+        # Traceability
+        lines.append("TRACEABILITY:")
+        lines.append("-" * 40)
+        lines.append("  In your response, provide:")
+        lines.append("    - For each acceptance criterion: the file(s) and line(s)")
+        lines.append("      that satisfy it.")
+        lines.append("    - Test output (pass/fail summary).")
+        lines.append("    - Explicit statement: 'All criteria verified — renaming")
+        lines.append(f"      {old_name} → {new_name}'")
+        lines.append("    - OR: 'Criteria X not met — not renaming.'")
+        lines.append("")
 
         return "\n".join(lines)
 

@@ -379,8 +379,9 @@ def main():
         current_num = inc_data["number"]
 
         if organism.state.last_increment_shown == current_num:
-            # Already showed this increment — advance it
-            organism.advance_generation()
+            # Already showed this increment — show verification prompt
+            # (NEVER auto-advance; the agent must explicitly rename)
+            print(tracker.format_verification_prompt(current))
         else:
             # First time seeing this increment — show it
             print(tracker.format_increment_prompt(current))
