@@ -12,7 +12,6 @@ from models import (
     Perspective,
     Priority,
     Prompt,
-    ANALYZABLE_DIRS,
 )
 from perspectives import PerspectiveAnalyzer
 
@@ -119,7 +118,7 @@ class DebugPerspective(PerspectiveAnalyzer):
                 tags=["code-quality"]
             ))
 
-        todos = self._find_todo_comments()
+        todos = self._find_todo_comments(analyses)
         self._generate_todo_prompts(todos, prompts)
 
         uncommitted = self.git_analyzer.get_uncommitted_changes()
@@ -141,31 +140,30 @@ class DebugPerspective(PerspectiveAnalyzer):
 
         return fitness, prompts
 
-    def _find_todo_comments(self) -> List[dict]:
+    def _find_todo_comments(self, analyses) -> List[dict]:
         """Scan source directories for TODO/FIXME comments"""
         todo_pattern = re.compile(r'#\s*(TODO|FIXME|XXX|HACK|BUG)[\s:]*(.*)', re.IGNORECASE)
         todos = []
 
-        for dir_name in ANALYZABLE_DIRS:
-            dir_path = self.root_dir / dir_name
-            if not dir_path.exists():
+        for file_path_str in analyses.keys():
+            if "__pycache__" in file_path_str:
                 continue
-            for file_path in dir_path.rglob("*.py"):
-                if "__pycache__" in str(file_path):
-                    continue
-                try:
-                    content = file_path.read_text()
-                    for i, line in enumerate(content.splitlines(), 1):
-                        match = todo_pattern.search(line)
-                        if match:
-                            todos.append({
-                                "file": str(file_path.relative_to(self.root_dir)),
-                                "line": i,
-                                "type": match.group(1).upper(),
-                                "text": match.group(2).strip()
-                            })
-                except Exception:
-                    continue
+            file_path = self.root_dir / file_path_str
+            if not file_path.exists():
+                continue
+            try:
+                content = file_path.read_text()
+                for i, line in enumerate(content.splitlines(), 1):
+                    match = todo_pattern.search(line)
+                    if match:
+                        todos.append({
+                            "file": str(file_path.relative_to(self.root_dir)),
+                            "line": i,
+                            "type": match.group(1).upper(),
+                            "text": match.group(2).strip()
+                        })
+            except Exception:
+                continue
 
         return todos
 
