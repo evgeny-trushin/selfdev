@@ -195,14 +195,17 @@ class SelfDevelopmentOrganism:
         except Exception as exc:
             return False, f"Test runner error: {exc}"
 
-    def advance_generation(self):
+    def advance_generation(self, force: bool = False):
         """Advance to next generation.
 
         Verifies the current TODO increment:
           - Tests must pass before an increment is marked done.
+          - All changes must be committed before advancing.
           - Changed files are listed for traceability.
         Then renames it to done, records fitness history, and outputs
         the next increment.
+
+        If *force* is True, skip the uncommitted-changes check.
         """
         tracker = IncrementTracker(self.root_dir)
         current = tracker.current_todo()
@@ -218,6 +221,29 @@ class SelfDevelopmentOrganism:
             print("    Fix the failures below before re-running develop.sh:\n")
             print(test_output)
             return
+
+        print("\n  ✓ ALL TESTS PASSED.")
+
+        # Gate: all changes must be committed before advancing
+        if not force:
+            git_analyzer = GitAnalyzer(self.root_dir)
+            uncommitted = git_analyzer.get_uncommitted_changes()
+            if uncommitted:
+                inc = tracker.parse_increment(current)
+                short = inc['short_desc'].replace('-', ' ').replace('_', ' ').title()
+                commit_msg = f"INCREMENT {inc['number']:04d}: {short}"
+                print("\n  ✗ CANNOT ADVANCE — there are uncommitted changes.")
+                print("    Commit your changes before advancing:\n")
+                print("    Uncommitted files:")
+                for f in uncommitted:
+                    print(f"      {f}")
+                print()
+                print(f'    Suggested commit command:')
+                print(f'      git add -A && git commit -m "{commit_msg}" && git push')
+                print()
+                print("    Then re-run:  ./develop.sh --advance")
+                print()
+                return
 
         # Mark the current increment as done
         done_path = tracker.mark_done(current)
@@ -289,6 +315,7 @@ def main():
     parser.add_argument("--all", action="store_true", help="Run all perspectives")
     parser.add_argument("--state", action="store_true", help="Show current state")
     parser.add_argument("--advance", action="store_true", help="Advance to next generation")
+    parser.add_argument("--force", action="store_true", help="Force advance even with uncommitted changes")
     parser.add_argument("--revert", type=str, default=None,
                         help="Generate prompt to revert increment (e.g. --revert=0001)")
     parser.add_argument("--revert_from", type=str, default=None,
@@ -316,7 +343,7 @@ def main():
         return
 
     if args.advance:
-        organism.advance_generation()
+        organism.advance_generation(force=getattr(args, 'force', False))
         return
 
     # --- Revert / Redo modes ---

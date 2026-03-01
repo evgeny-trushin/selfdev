@@ -439,7 +439,8 @@ class IncrementTracker:
         lines.append("  4. List changed files in the commit body")
         lines.append(f'  5. git add -A && git commit -m "{commit_msg}"')
         lines.append("  6. git push")
-        lines.append("  7. Run ./develop.sh  (verify & get next increment)")
+        lines.append("  7. Run ./develop.sh --advance  (verify tests & commit, then advance)")
+        lines.append("  8. Run ./develop.sh  (get next increment)")
         lines.append("")
 
         return "\n".join(lines)
@@ -561,7 +562,8 @@ class IncrementTracker:
         lines.append(f"  4. List changed files in the commit body")
         lines.append(f'  5. git add -A && git commit -m "{commit_msg}"')
         lines.append(f"  6. git push")
-        lines.append(f"  7. Run ./develop.sh  (verify & get next increment)")
+        lines.append(f"  7. Run ./develop.sh --advance  (verify tests & commit, then advance)")
+        lines.append(f"  8. Run ./develop.sh  (get next increment)")
         lines.append("")
 
         return "\n".join(lines)
@@ -671,24 +673,37 @@ class IncrementTracker:
         lines.append("  No syntax or import errors are allowed.")
         lines.append("")
 
-        # Step 4: Explicit rename instruction
+        # Step 4: Commit changes
+        short = inc['short_desc'].replace('-', ' ').replace('_', ' ').title()
+        commit_msg = f"INCREMENT {inc['number']:04d}: {short}"
+        lines.append("STEP 4 — COMMIT CHANGES (only after steps 1-3 pass):")
+        lines.append("-" * 40)
+        lines.append("  ⚠  You MUST commit all changes before advancing.")
+        lines.append("  List all changed/created files in the commit body.")
+        lines.append("")
+        lines.append(f'    git add -A && git commit -m "{commit_msg}" && git push')
+        lines.append("")
+
+        # Step 5: Explicit rename instruction
         old_name = increment_path.name
         if "-todo-" in old_name:
             new_name = old_name.replace("-todo-", "-done-", 1)
         else:
             new_name = old_name.replace("_todo_", "_done_", 1)
 
-        lines.append("STEP 4 — RENAME (only after steps 1-3 pass):")
+        lines.append("STEP 5 — RENAME (only after steps 1-4 pass):")
         lines.append("-" * 40)
         lines.append("  ⚠  THIS IS THE ONLY WAY TO ADVANCE THE INCREMENT.")
-        lines.append("  After ALL checks above pass, EXPLICITLY rename the file:")
+        lines.append("  After ALL checks above pass and changes are committed,")
+        lines.append("  EXPLICITLY rename the file:")
         lines.append("")
         lines.append(f"    mv requirements/{old_name} requirements/{new_name}")
         lines.append("")
         lines.append("  Or equivalently run:")
         lines.append("    ./develop.sh --advance")
         lines.append("")
-        lines.append("  ❌ If ANY acceptance criterion is NOT met, or tests fail:")
+        lines.append("  ❌ If ANY acceptance criterion is NOT met, tests fail,")
+        lines.append("     or changes are not committed:")
         lines.append("     DO NOT RENAME. Fix the issues and re-run verification.")
         lines.append("")
 
@@ -699,9 +714,10 @@ class IncrementTracker:
         lines.append("    - For each acceptance criterion: the file(s) and line(s)")
         lines.append("      that satisfy it.")
         lines.append("    - Test output (pass/fail summary).")
-        lines.append("    - Explicit statement: 'All criteria verified — renaming")
-        lines.append(f"      {old_name} → {new_name}'")
+        lines.append("    - Explicit statement: 'All criteria verified, changes")
+        lines.append(f"      committed — renaming {old_name} → {new_name}'")
         lines.append("    - OR: 'Criteria X not met — not renaming.'")
+        lines.append("    - OR: 'Uncommitted changes — not renaming.'")
         lines.append("")
 
         return "\n".join(lines)
