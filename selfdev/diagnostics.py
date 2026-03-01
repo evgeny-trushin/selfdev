@@ -12,7 +12,6 @@ from models import (
     Perspective,
     Priority,
     Prompt,
-    ANALYZABLE_DIRS,
 )
 from perspectives import PerspectiveAnalyzer
 
@@ -146,26 +145,27 @@ class DebugPerspective(PerspectiveAnalyzer):
         todo_pattern = re.compile(r'#\s*(TODO|FIXME|XXX|HACK|BUG)[\s:]*(.*)', re.IGNORECASE)
         todos = []
 
-        for dir_name in ANALYZABLE_DIRS:
-            dir_path = self.root_dir / dir_name
-            if not dir_path.exists():
+        analyses = self.code_analyzer.file_analyses
+        if not analyses:
+            analyses = self.code_analyzer.get_all_analyses()
+
+        for rel_path in analyses.keys():
+            file_path = self.root_dir / rel_path
+            if not file_path.exists() or "__pycache__" in str(file_path):
                 continue
-            for file_path in dir_path.rglob("*.py"):
-                if "__pycache__" in str(file_path):
-                    continue
-                try:
-                    content = file_path.read_text()
-                    for i, line in enumerate(content.splitlines(), 1):
-                        match = todo_pattern.search(line)
-                        if match:
-                            todos.append({
-                                "file": str(file_path.relative_to(self.root_dir)),
-                                "line": i,
-                                "type": match.group(1).upper(),
-                                "text": match.group(2).strip()
-                            })
-                except Exception:
-                    continue
+            try:
+                content = file_path.read_text(encoding="utf-8")
+                for i, line in enumerate(content.splitlines(), 1):
+                    match = todo_pattern.search(line)
+                    if match:
+                        todos.append({
+                            "file": rel_path,
+                            "line": i,
+                            "type": match.group(1).upper(),
+                            "text": match.group(2).strip()
+                        })
+            except Exception:
+                continue
 
         return todos
 
