@@ -56,7 +56,8 @@ class SelfDevelopmentOrganism:
 
     def __init__(self, root_dir: Path = ROOT_DIR):
         self.root_dir = root_dir
-        self.state = OrganismState.load(STATE_FILE)
+        self.state_file = root_dir / "organism_state.json"
+        self.state = OrganismState.load(self.state_file)
         self.formatter = PromptFormatter()
 
         self.perspectives = {
@@ -280,7 +281,7 @@ class SelfDevelopmentOrganism:
         else:
             self.state.last_increment_shown = 0
 
-        self.state.save(STATE_FILE)
+        self.state.save(self.state_file)
 
     def print_state(self):
         """Print current organism state"""
@@ -399,7 +400,7 @@ def main():
         if current is None:
             print("\n  ★ ALL INCREMENTS COMPLETED!")
             print("    Run with --all to see full perspective analysis.\n")
-            organism.state.save(STATE_FILE)
+            organism.state.save(organism.state_file)
             return
 
         inc_data = tracker.parse_increment(current)
@@ -413,7 +414,7 @@ def main():
             # First time seeing this increment — show it
             print(tracker.format_increment_prompt(current))
             organism.state.last_increment_shown = current_num
-            organism.state.save(STATE_FILE)
+            organism.state.save(organism.state_file)
 
     return
 

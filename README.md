@@ -5,10 +5,9 @@ An AI-powered code evolution system. It scans your project, generates precise de
 ## Table of Contents
 
 1. [Why Selfdev](#why-selfdev)
-2. [Install](#install)
-3. [How to Use](#how-to-use)
-4. [How It Works](#how-it-works)
-5. [Use Cases](#use-cases)
+2. [How to Use](#how-to-use)
+3. [How It Works](#how-it-works)
+4. [Use Cases](#use-cases)
 
 ---
 
@@ -22,28 +21,13 @@ An AI-powered code evolution system. It scans your project, generates precise de
 
 ---
 
-## Install
-
-```bash
-# 1. Clone into a temp directory
-git clone https://github.com/evgeny-trushin/selfdev /tmp/selfdev
-
-# 2. Copy the selfdev/ folder into your project root
-cp -r /tmp/selfdev/selfdev /path/to/your/project/selfdev
-
-# 3. Make the entry point executable
-chmod +x /path/to/your/project/selfdev/develop.sh
-```
-
-Requirements: **Python 3.8+** (no pip packages needed).
-
----
-
 ## How to Use
 
 ### One-liner for AI agents (copy-paste)
 
-> Clone https://github.com/evgeny-trushin/selfdev to a temp dir, copy its `selfdev/` subfolder into my project root, then run `./selfdev/develop.sh`. Read the generated prompt, implement it, commit, and run `./selfdev/develop.sh` again. Repeat until all increments are completed.
+> Clone https://github.com/evgeny-trushin/selfdev to a temp dir, copy its `selfdev/`, `requirements/`, and `principles/` folders into my project root, then run `./selfdev/develop.sh`. Read the generated prompt, implement it, commit, and run `./selfdev/develop.sh` again. Repeat until all increments are completed.
+
+Requirements: **Python 3.8+** (no pip packages needed).
 
 ### Manual workflow
 
