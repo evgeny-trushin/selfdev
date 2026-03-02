@@ -1,14 +1,11 @@
 """
 Increment Tracker for the Self-Development Organism system.
 
-Manages the requirements/increment_XXXX-todo-*.md ↔ done lifecycle:
-  1. Find the current TODO increment (lowest numbered -todo- / _todo_ file).
+Manages the requirements/increment_XXXX_todo_*.md ↔ done lifecycle:
+  1. Find the current TODO increment (lowest numbered _todo_ file).
   2. Read it and resolve all referenced principles from principles/.
   3. On --advance, verify the current increment, rename todo → done,
      and present the next increment with injected principles.
-
-Supports both hyphen (increment_0001-todo-name.md) and underscore
-(increment_0001_todo_name.md) separators for maximum compatibility.
 """
 
 import os
@@ -32,26 +29,11 @@ class IncrementTracker:
     # Discovery
     # ------------------------------------------------------------------
 
-    # Separator between number/status/slug — supports both - and _
-    _SEP = "[-_]"
-
     def _increment_files(self, status: str = "todo") -> List[Path]:
-        """Return sorted list of increment files matching *status* (todo|done).
-
-        Supports both ``increment_0001-todo-name.md`` (hyphen) and
-        ``increment_0001_todo_name.md`` (underscore) conventions.
-        """
-        # Use regex-based filtering because glob [] support varies by platform
-        pattern = re.compile(
-            rf"increment_\d+[-_]{re.escape(status)}[-_].+\.md$"
-        )
-        if not self.requirements_dir.exists():
-            return []
-        files = sorted(
-            p for p in self.requirements_dir.iterdir()
-            if p.is_file() and pattern.match(p.name)
-        )
-        return files
+        """Return sorted list of increment files matching *status* (todo|done)."""
+        pattern = str(self.requirements_dir / f"increment_*_{status}_*.md")
+        files = sorted(glob.glob(pattern))
+        return [Path(f) for f in files]
 
     def current_todo(self) -> Optional[Path]:
         """Return the first (lowest-numbered) TODO increment file, or None."""
@@ -103,17 +85,17 @@ class IncrementTracker:
           acceptance_criteria (list of strings), raw_content
         """
         content = path.read_text(encoding="utf-8")
-        name = path.stem  # e.g. increment_0001-todo-knowledge-hierarchy-schema
+        name = path.stem  # e.g. increment_0001_todo_multi_perspective_validation
 
         # Extract number
         num_match = re.search(r'increment_(\d+)', name)
         number = int(num_match.group(1)) if num_match else 0
 
-        # Extract status from filename (supports both - and _ separators)
-        status = "todo" if re.search(r'[-_]todo[-_]', name) else "done"
+        # Extract status from filename
+        status = "todo" if "_todo_" in name else "done"
 
-        # Extract short description from filename (supports both separators)
-        desc_match = re.search(r'[-_](?:todo|done)[-_](.+)$', name)
+        # Extract short description from filename
+        desc_match = re.search(r'_(?:todo|done)_(.+)$', name)
         short_desc = desc_match.group(1) if desc_match else ""
 
         # ----------------------------------------------------------
@@ -301,17 +283,12 @@ class IncrementTracker:
     # ------------------------------------------------------------------
 
     def mark_done(self, increment_path: Path) -> Path:
-        """Rename an increment file from todo to done.
+        """Rename an increment file from _todo_ to _done_.
 
-        Supports both hyphen (``-todo-``) and underscore (``_todo_``)
-        separators.  Returns the new path.
+        Returns the new path.
         """
         old_name = increment_path.name
-        # Detect which separator style is used and replace accordingly
-        if "-todo-" in old_name:
-            new_name = old_name.replace("-todo-", "-done-", 1)
-        else:
-            new_name = old_name.replace("_todo_", "_done_", 1)
+        new_name = old_name.replace("_todo_", "_done_", 1)
         new_path = increment_path.parent / new_name
         increment_path.rename(new_path)
         return new_path
@@ -429,7 +406,7 @@ class IncrementTracker:
             lines.append("")
 
         # Workflow reminder
-        short = inc_data['short_desc'].replace('-', ' ').replace('_', ' ').title()
+        short = inc_data['short_desc'].replace('_', ' ').title()
         commit_msg = f"INCREMENT {inc_data['number']:04d}: {short}"
         lines.append("WORKFLOW:")
         lines.append("-" * 40)
@@ -439,8 +416,7 @@ class IncrementTracker:
         lines.append("  4. List changed files in the commit body")
         lines.append(f'  5. git add -A && git commit -m "{commit_msg}"')
         lines.append("  6. git push")
-        lines.append("  7. Run ./develop.sh --advance  (verify tests & commit, then advance)")
-        lines.append("  8. Run ./develop.sh  (get next increment)")
+        lines.append("  7. Run ./develop.sh  (verify & get next increment)")
         lines.append("")
 
         return "\n".join(lines)
@@ -507,10 +483,9 @@ class IncrementTracker:
         lines.append("    - Create or modify files directly related to this increment.")
         lines.append("    - Add or update tests that verify this increment.")
         lines.append("  FORBIDDEN:")
-        lines.append("    - Do NOT rename todo→done automatically. NEVER.")
         lines.append("    - Do NOT auto-advance increments by rerunning develop.sh.")
-        lines.append("    - Do NOT mark an increment done until a VERIFICATION step")
-        lines.append("      has explicitly confirmed all acceptance criteria are met.")
+        lines.append("    - Do NOT mark an increment done until tests pass and all")
+        lines.append("      referenced files are implemented.")
         lines.append("    - Do NOT modify unrelated increments or requirements.")
         lines.append("    - Do NOT skip acceptance criteria.")
         lines.append("")
@@ -522,12 +497,7 @@ class IncrementTracker:
         lines.append("    1. Implement the requirement (code changes).")
         lines.append("    2. Run tests and linter — all must pass.")
         lines.append("    3. List all changed/created files in the commit message body.")
-        lines.append("    4. Commit & push.")
-        lines.append("    5. Run ./develop.sh to trigger VERIFICATION.")
-        lines.append("    6. Only after verification passes, EXPLICITLY rename")
-        lines.append(f"       {increment_path.name}")
-        lines.append(f"       from *todo* → *done* (or run ./develop.sh --advance).")
-        lines.append("    ⚠  The rename must NEVER happen automatically.")
+        lines.append("    4. Only then advance ONE step (commit & push).")
         lines.append("")
 
         # Traceability
@@ -551,7 +521,7 @@ class IncrementTracker:
             lines.append("=" * 70)
 
         # Workflow with commit message
-        short = inc['short_desc'].replace('-', ' ').replace('_', ' ').title()
+        short = inc['short_desc'].replace('_', ' ').title()
         commit_msg = f"INCREMENT {inc['number']:04d}: {short}"
         lines.append("")
         lines.append("WORKFLOW:")
@@ -562,8 +532,7 @@ class IncrementTracker:
         lines.append(f"  4. List changed files in the commit body")
         lines.append(f'  5. git add -A && git commit -m "{commit_msg}"')
         lines.append(f"  6. git push")
-        lines.append(f"  7. Run ./develop.sh --advance  (verify tests & commit, then advance)")
-        lines.append(f"  8. Run ./develop.sh  (get next increment)")
+        lines.append(f"  7. Run ./develop.sh  (verify & get next increment)")
         lines.append("")
 
         return "\n".join(lines)
@@ -613,132 +582,16 @@ class IncrementTracker:
         return "\n".join(lines)
 
     # ------------------------------------------------------------------
-    # Verification prompt
-    # ------------------------------------------------------------------
-
-    def format_verification_prompt(self, increment_path: Path) -> str:
-        """Generate a prompt that verifies implementation of the current
-        increment and explicitly asks the agent to rename todo → done.
-
-        This prompt is shown when the increment has already been presented
-        to the developer/AI.  It MUST NOT rename the file itself — the
-        agent must do so only after confirming every acceptance criterion.
-        """
-        inc = self.parse_increment(increment_path)
-        principles = self.resolve_principles(inc["related_principles"])
-        progress = self.done_count()
-        total = self.total_count()
-
-        lines: List[str] = []
-
-        # Header
-        lines.append("=" * 70)
-        lines.append(f"  🔍 VERIFICATION: INCREMENT {inc['number']:04d}")
-        lines.append(f"  {inc['title']}")
-        lines.append(f"  Requirement: {inc['requirement_id']}")
-        lines.append(f"  Progress: {progress}/{total} increments completed")
-        lines.append("=" * 70)
-        lines.append("")
-
-        # Purpose
-        lines.append("PURPOSE:")
-        lines.append("-" * 40)
-        lines.append("  This increment was already presented. Before it can be")
-        lines.append("  marked as done, you MUST verify the implementation.")
-        lines.append("  DO NOT rename the file until every check below passes.")
-        lines.append("")
-
-        # Step 1: Acceptance criteria verification
-        if inc["acceptance_criteria"]:
-            lines.append("STEP 1 — VERIFY ACCEPTANCE CRITERIA:")
-            lines.append("-" * 40)
-            lines.append("  Check each criterion against the current codebase.")
-            lines.append("  Mark ✅ only when you have confirmed the code satisfies it:")
-            lines.append("")
-            for i, criterion in enumerate(inc["acceptance_criteria"], 1):
-                lines.append(f"  [ ] {i}. {criterion}")
-            lines.append("")
-
-        # Step 2: Tests
-        lines.append("STEP 2 — RUN TESTS:")
-        lines.append("-" * 40)
-        lines.append("  python -m pytest selfdev/tests/")
-        lines.append("  ALL tests must pass. If any test fails, fix it first.")
-        lines.append("")
-
-        # Step 3: Linter
-        lines.append("STEP 3 — RUN LINTER:")
-        lines.append("-" * 40)
-        lines.append("  python -m py_compile <changed files>")
-        lines.append("  No syntax or import errors are allowed.")
-        lines.append("")
-
-        # Step 4: Commit changes
-        short = inc['short_desc'].replace('-', ' ').replace('_', ' ').title()
-        commit_msg = f"INCREMENT {inc['number']:04d}: {short}"
-        lines.append("STEP 4 — COMMIT CHANGES (only after steps 1-3 pass):")
-        lines.append("-" * 40)
-        lines.append("  ⚠  You MUST commit all changes before advancing.")
-        lines.append("  List all changed/created files in the commit body.")
-        lines.append("")
-        lines.append(f'    git add -A && git commit -m "{commit_msg}" && git push')
-        lines.append("")
-
-        # Step 5: Explicit rename instruction
-        old_name = increment_path.name
-        if "-todo-" in old_name:
-            new_name = old_name.replace("-todo-", "-done-", 1)
-        else:
-            new_name = old_name.replace("_todo_", "_done_", 1)
-
-        lines.append("STEP 5 — RENAME (only after steps 1-4 pass):")
-        lines.append("-" * 40)
-        lines.append("  ⚠  THIS IS THE ONLY WAY TO ADVANCE THE INCREMENT.")
-        lines.append("  After ALL checks above pass and changes are committed,")
-        lines.append("  EXPLICITLY rename the file:")
-        lines.append("")
-        lines.append(f"    mv requirements/{old_name} requirements/{new_name}")
-        lines.append("")
-        lines.append("  Or equivalently run:")
-        lines.append("    ./develop.sh --advance")
-        lines.append("")
-        lines.append("  ❌ If ANY acceptance criterion is NOT met, tests fail,")
-        lines.append("     or changes are not committed:")
-        lines.append("     DO NOT RENAME. Fix the issues and re-run verification.")
-        lines.append("")
-
-        # Traceability
-        lines.append("TRACEABILITY:")
-        lines.append("-" * 40)
-        lines.append("  In your response, provide:")
-        lines.append("    - For each acceptance criterion: the file(s) and line(s)")
-        lines.append("      that satisfy it.")
-        lines.append("    - Test output (pass/fail summary).")
-        lines.append("    - Explicit statement: 'All criteria verified, changes")
-        lines.append(f"      committed — renaming {old_name} → {new_name}'")
-        lines.append("    - OR: 'Criteria X not met — not renaming.'")
-        lines.append("    - OR: 'Uncommitted changes — not renaming.'")
-        lines.append("")
-
-        return "\n".join(lines)
-
-    # ------------------------------------------------------------------
     # Revert / Redo prompt generation
     # ------------------------------------------------------------------
 
     def _find_increment_file(self, number: int) -> Optional[Path]:
-        """Find an increment file (todo or done) by its number.
-
-        Supports both hyphen and underscore separators.
-        """
-        pat = re.compile(
-            rf"increment_{number:04d}[-_](?:todo|done)[-_].+\.md$"
-        )
-        if not self.requirements_dir.exists():
-            return None
-        for f in sorted(self.requirements_dir.iterdir()):
-            if f.is_file() and pat.match(f.name):
-                return f
+        """Find an increment file (todo or done) by its number."""
+        for status in ("todo", "done"):
+            pattern = str(self.requirements_dir / f"increment_{number:04d}_{status}_*.md")
+            files = glob.glob(pattern)
+            if files:
+                return Path(files[0])
         return None
 
     def format_revert_prompt(self, increment_number: int) -> str:
@@ -803,14 +656,11 @@ class IncrementTracker:
             lines.append(f"  5. git push")
         lines.append("")
 
-        if inc_file and re.search(r'[-_]done[-_]', inc_file.name):
+        if inc_file and "_done_" in inc_file.name:
             lines.append("POST-REVERT:")
             lines.append("-" * 40)
             lines.append(f"  Rename the increment file back to todo:")
-            if "-done-" in inc_file.name:
-                todo_name = inc_file.name.replace("-done-", "-todo-", 1)
-            else:
-                todo_name = inc_file.name.replace("_done_", "_todo_", 1)
+            todo_name = inc_file.name.replace("_done_", "_todo_", 1)
             lines.append(f"    mv {inc_file.name} {todo_name}")
             lines.append("")
 
@@ -946,7 +796,7 @@ class IncrementTracker:
                           " re-create the requirement before implementing.)")
         lines.append("")
 
-        short = inc['short_desc'].replace('-', ' ').replace('_', ' ').title() if inc else f"Increment {increment_number:04d}"
+        short = inc['short_desc'].replace('_', ' ').title() if inc else f"Increment {increment_number:04d}"
         commit_msg = f"INCREMENT {increment_number:04d}: {short} (redo)"
         lines.append("WORKFLOW:")
         lines.append("-" * 40)
