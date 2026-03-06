@@ -265,6 +265,162 @@ class IncrementTracker:
         """
         return bool(inc_data.get("description", "").strip())
 
+    # ------------------------------------------------------------------
+    # Parse-gap diagnostics
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _diagnose_parse_gaps(inc_data: dict) -> List[dict]:
+        """Detect missing parsed fields and scan raw content for near-matches.
+
+        Returns a list of diagnostic dicts with keys:
+          field, severity ('error'|'warning'), message, near_match, fix_hint
+        """
+        diagnostics: List[dict] = []
+        raw = inc_data.get("raw_content", "")
+
+        # --- Acceptance criteria ---
+        if not inc_data.get("acceptance_criteria"):
+            diag = {
+                "field": "acceptance_criteria",
+                "severity": "error",
+                "message": "No acceptance criteria extracted.",
+                "near_match": None,
+                "fix_hint": None,
+            }
+            # Numbered prefix before "Acceptance Criteria"
+            m = re.search(
+                r'^(#{1,6})\s+\d+[\.\)]\s*(Acceptance\s+Criteria.*)$',
+                raw, re.MULTILINE | re.IGNORECASE,
+            )
+            if m:
+                diag["near_match"] = m.group(0).strip()
+                diag["fix_hint"] = f"{m.group(1)} Acceptance Criteria"
+                diag["message"] = (
+                    f"Heading has a numbered prefix that breaks parsing: "
+                    f"'{m.group(0).strip()}'."
+                )
+            else:
+                # Wrong heading level (### instead of ##)
+                m = re.search(
+                    r'^(#{3,6})\s+Acceptance\s+Criteria\s*$',
+                    raw, re.MULTILINE | re.IGNORECASE,
+                )
+                if m:
+                    diag["near_match"] = m.group(0).strip()
+                    diag["fix_hint"] = "## Acceptance Criteria"
+                    diag["message"] = (
+                        f"Heading level too deep: '{m.group(0).strip()}'. "
+                        f"Parser expects '## Acceptance Criteria' (h2)."
+                    )
+                else:
+                    diag["message"] = (
+                        "No acceptance criteria section found. "
+                        "Add '## Acceptance Criteria' followed by a checklist."
+                    )
+                    diag["fix_hint"] = "## Acceptance Criteria"
+            diagnostics.append(diag)
+
+        # --- Related principles ---
+        if not inc_data.get("related_principles"):
+            diag = {
+                "field": "related_principles",
+                "severity": "warning",
+                "message": "No related principles extracted.",
+                "near_match": None,
+                "fix_hint": None,
+            }
+            m = re.search(
+                r'^(#{1,6})\s+\d+[\.\)]\s*(Related\s+Principles.*)$',
+                raw, re.MULTILINE | re.IGNORECASE,
+            )
+            if m:
+                diag["near_match"] = m.group(0).strip()
+                diag["fix_hint"] = f"{m.group(1)} Related Principles"
+                diag["message"] = (
+                    f"Heading has a numbered prefix: '{m.group(0).strip()}'."
+                )
+            diagnostics.append(diag)
+
+        # --- Description ---
+        if not inc_data.get("description", "").strip():
+            diag = {
+                "field": "description",
+                "severity": "error",
+                "message": "No description extracted.",
+                "near_match": None,
+                "fix_hint": "## Description",
+            }
+            m = re.search(
+                r'^(#{1,6})\s+\d+[\.\)]\s*(Description.*)$',
+                raw, re.MULTILINE | re.IGNORECASE,
+            )
+            if m:
+                diag["near_match"] = m.group(0).strip()
+                diag["fix_hint"] = f"{m.group(1)} Description"
+                diag["message"] = (
+                    f"Heading has a numbered prefix: '{m.group(0).strip()}'."
+                )
+            diagnostics.append(diag)
+
+        return diagnostics
+
+    @staticmethod
+    def _format_parse_diagnostics(diagnostics: List[dict],
+                                  filepath: str = "") -> str:
+        """Format diagnostic dicts into a warning block with fix hints."""
+        if not diagnostics:
+            return ""
+
+        lines: List[str] = []
+        lines.append("")
+        lines.append("⚠️  PARSE WARNINGS:")
+        lines.append("-" * 40)
+        lines.append("  Some fields could not be extracted from the file.")
+        lines.append("")
+
+        for d in diagnostics:
+            icon = "❌" if d["severity"] == "error" else "⚠️ "
+            lines.append(f"  {icon} {d['field'].upper()}: {d['message']}")
+            if d.get("near_match"):
+                lines.append(f"     Found:    {d['near_match']}")
+            if d.get("fix_hint"):
+                lines.append(f"     Expected: {d['fix_hint']}")
+            lines.append("")
+
+        # Build actionable fix instructions
+        fixable = [d for d in diagnostics if d.get("near_match") and d.get("fix_hint")]
+        if fixable:
+            lines.append("  SUGGESTED FIX:")
+            lines.append("  " + "-" * 38)
+            lines.append("  Rename these headings in the requirements file:")
+            lines.append("")
+            for d in fixable:
+                lines.append(f"    Change: '{d['near_match']}'")
+                lines.append(f"    To:     '{d['fix_hint']}'")
+                lines.append("")
+            if filepath:
+                lines.append("  Or ask the AI to fix it:")
+                lines.append(f"    \"Fix the headings in {filepath} so the "
+                             "selfdev parser can extract acceptance criteria "
+                             "and other sections. Remove numbered prefixes "
+                             "from ## headings that match parser patterns "
+                             "(Acceptance Criteria, Related Principles, "
+                             "Description).\"")
+                lines.append("")
+        else:
+            nf = [d for d in diagnostics if not d.get("near_match")]
+            if nf:
+                lines.append("  SUGGESTED FIX:")
+                lines.append("  " + "-" * 38)
+                lines.append("  Add the missing sections to the requirements file.")
+                for d in nf:
+                    if d.get("fix_hint"):
+                        lines.append(f"    {d['fix_hint']}")
+                lines.append("")
+
+        return "\n".join(lines)
+
     def load_principle(self, code: str) -> Optional[str]:
         """Load principle content by code (e.g. 'P2', 'B1', 'USR')."""
         path = self.principles_dir / f"{code}.md"
@@ -499,6 +655,12 @@ class IncrementTracker:
                 lines.append(f"  {i}. {criterion}")
             lines.append("")
 
+        # Parse-gap diagnostics — warn user about missing fields
+        gaps = self._diagnose_parse_gaps(inc)
+        if gaps:
+            lines.append(self._format_parse_diagnostics(
+                gaps, increment_path.name))
+
         # Allowed / forbidden actions
         lines.append("RULES:")
         lines.append("-" * 40)
@@ -658,6 +820,12 @@ class IncrementTracker:
             for i, criterion in enumerate(inc["acceptance_criteria"], 1):
                 lines.append(f"  [ ] {i}. {criterion}")
             lines.append("")
+
+        # Parse-gap diagnostics — warn user about missing fields
+        gaps = self._diagnose_parse_gaps(inc)
+        if gaps:
+            lines.append(self._format_parse_diagnostics(
+                gaps, increment_path.name))
 
         # Step 2: Tests
         lines.append("STEP 2 — RUN TESTS:")
