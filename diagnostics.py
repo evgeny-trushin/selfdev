@@ -36,6 +36,27 @@ class AnalyticsPerspective(PerspectiveAnalyzer):
                 description="Run more generations to enable trend analysis."
             )]
 
+        if len(history) >= 2:
+            last = history[-1]
+            prev = history[-2]
+            last_overall = last.get("overall", 0.5)
+            prev_overall = prev.get("overall", 0.5)
+
+            if last_overall < prev_overall - 0.05:
+                prompts.append(Prompt(
+                    perspective=Perspective.ANALYTICS,
+                    priority=Priority.HIGH,
+                    title="Fitness regression detected",
+                    description=f"Fitness dropped from {prev_overall:.2%} to {last_overall:.2%} in the last generation.",
+                    metric_current=last_overall,
+                    metric_target=prev_overall,
+                    acceptance_criteria=[
+                        "Investigate the cause of the regression",
+                        "Fix the issues introduced in the last generation",
+                        "Ensure overall fitness is restored"
+                    ]
+                ))
+
         older = history[:-5]
         recent = history[-5:]
         if len(recent) >= 2 and len(older) >= 1:
