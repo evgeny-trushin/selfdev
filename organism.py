@@ -273,6 +273,13 @@ class SelfDevelopmentOrganism:
             for perspective, score in self.state.fitness_scores.items():
                 print(f"    {perspective}: {score:.2%}")
 
+        if self.state.fitness_history:
+            print("\n  Fitness History (last 5):")
+            for entry in self.state.fitness_history[-5:]:
+                gen = entry.get("generation", 0)
+                overall = entry.get("overall", 0.0)
+                print(f"    Generation {gen}: {overall:.2%}")
+
         print("=" * 60)
 
 

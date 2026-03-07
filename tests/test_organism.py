@@ -86,10 +86,21 @@ class TestSelfDevelopmentOrganism(unittest.TestCase):
         self.assertTrue((req_dir / "increment_0001_done_test.md").exists())
         self.assertFalse((req_dir / "increment_0001_todo_test.md").exists())
 
-    def test_print_state(self):
+    @patch("sys.stdout", new_callable=lambda: __import__('io').StringIO())
+    def test_print_state(self, mock_stdout):
         organism = SelfDevelopmentOrganism(root_dir=Path(self.tmp_dir))
         organism.state.fitness_scores = {"user": 0.7}
+        organism.state.fitness_history = [
+            {"generation": 0, "overall": 0.5},
+            {"generation": 1, "overall": 0.6}
+        ]
+
         organism.print_state()
+
+        output = mock_stdout.getvalue()
+        self.assertIn("Fitness History (last 5):", output)
+        self.assertIn("Generation 0: 50.00%", output)
+        self.assertIn("Generation 1: 60.00%", output)
 
     def test_perspectives_sorted_by_priority(self):
         organism = SelfDevelopmentOrganism(root_dir=Path(self.tmp_dir))

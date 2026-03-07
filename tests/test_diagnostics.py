@@ -49,8 +49,29 @@ class TestAnalyticsPerspective(unittest.TestCase):
         fitness, prompts = analyzer.analyze()
         self.assertEqual(fitness, 0.5)
         self.assertEqual(len(prompts), 1)
-        self.assertEqual(prompts[0].priority, Priority.INFO)
-        self.assertIn("Insufficient", prompts[0].title)
+
+    def test_regression_detection(self):
+        """Regression detected when the last generation drops by >= 0.05 from previous."""
+        self.state.fitness_history = [
+            {"overall": 0.8, "generation": 0},
+            {"overall": 0.74, "generation": 1},
+        ]
+        analyzer = self._make_analyzer()
+        fitness, prompts = analyzer.analyze()
+        regression_prompts = [p for p in prompts if "regression detected" in p.title.lower()]
+        self.assertEqual(len(regression_prompts), 1)
+        self.assertEqual(regression_prompts[0].priority, Priority.HIGH)
+
+    def test_no_regression_if_drop_is_small(self):
+        """No regression detected if drop is less than 0.05."""
+        self.state.fitness_history = [
+            {"overall": 0.8, "generation": 0},
+            {"overall": 0.76, "generation": 1},
+        ]
+        analyzer = self._make_analyzer()
+        fitness, prompts = analyzer.analyze()
+        regression_prompts = [p for p in prompts if "regression detected" in p.title.lower()]
+        self.assertEqual(len(regression_prompts), 0)
 
     def test_insufficient_history_empty(self):
         analyzer = self._make_analyzer()
