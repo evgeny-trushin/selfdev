@@ -91,6 +91,15 @@ class TestSelfDevelopmentOrganism(unittest.TestCase):
         organism.state.fitness_scores = {"user": 0.7}
         organism.print_state()
 
+    def test_print_state_with_history(self):
+        """Print state when fitness history is present."""
+        organism = SelfDevelopmentOrganism(root_dir=Path(self.tmp_dir))
+        organism.state.fitness_history = [
+            {"generation": 0, "overall": 0.5},
+            {"generation": 1, "overall": 0.6}
+        ]
+        organism.print_state()
+
     def test_perspectives_sorted_by_priority(self):
         organism = SelfDevelopmentOrganism(root_dir=Path(self.tmp_dir))
         prompts = organism.run_perspective(Perspective.USER)
@@ -162,10 +171,19 @@ class TestSelfDevelopmentOrganism(unittest.TestCase):
         (Path(self.tmp_dir) / "principles").mkdir()
         organism = SelfDevelopmentOrganism(root_dir=Path(self.tmp_dir))
         organism.state = OrganismState()
-        organism.state.fitness_scores = {"user": 0.8, "test": 0.6}
         mock_git = _mock_git_analyzer()
         for p in organism.perspectives.values():
             p.git_analyzer = mock_git
+
+        # Mock analyze so we get predictable fitness
+        for name, p in organism.perspectives.items():
+            if name.value == "user":
+                p.analyze = lambda: (0.8, [])
+            elif name.value == "test":
+                p.analyze = lambda: (0.6, [])
+            else:
+                p.analyze = lambda: (0.7, [])
+
         with _patch_tests_pass():
             organism.advance_generation()
         entry = organism.state.fitness_history[-1]

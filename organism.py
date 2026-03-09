@@ -225,6 +225,11 @@ class SelfDevelopmentOrganism:
         inc = tracker.parse_increment(done_path)
 
         # Record fitness history
+        # Ensure we have fresh fitness scores before recording
+        for perspective_name, analyzer in self.perspectives.items():
+            fitness, _ = analyzer.analyze()
+            self.state.fitness_scores[perspective_name.value] = fitness
+
         scores = dict(self.state.fitness_scores)
         if scores:
             scores["overall"] = sum(scores.values()) / len(scores)
@@ -272,6 +277,17 @@ class SelfDevelopmentOrganism:
             print("\n  Fitness Scores:")
             for perspective, score in self.state.fitness_scores.items():
                 print(f"    {perspective}: {score:.2%}")
+
+        if self.state.fitness_history:
+            print("\n  Fitness History (Overall):")
+            # Show the last 5 generations
+            for entry in self.state.fitness_history[-5:]:
+                gen = entry.get("generation", 0)
+                score = entry.get("overall")
+                if score is not None:
+                    print(f"    Gen {gen:02d}: {score:.2%}")
+                else:
+                    print(f"    Gen {gen:02d}: N/A")
 
         print("=" * 60)
 
