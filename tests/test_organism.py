@@ -198,6 +198,25 @@ class TestSelfDevelopmentOrganism(unittest.TestCase):
         organism.state = OrganismState()
         organism.print_state()
 
+    def test_print_state_with_fitness_history(self):
+        """print_state should output the fitness history."""
+        organism = SelfDevelopmentOrganism(root_dir=Path(self.tmp_dir))
+        organism.state = OrganismState()
+        organism.state.fitness_history = [
+            {"generation": 0, "overall": 0.5},
+            {"generation": 1, "overall": 0.75},
+            {"generation": 2}
+        ]
+
+        with patch('sys.stdout', new_callable=lambda: __import__('io').StringIO()) as mock_stdout:
+            organism.print_state()
+            output = mock_stdout.getvalue()
+
+        self.assertIn("Fitness History:", output)
+        self.assertIn("Generation 0: 50.00%", output)
+        self.assertIn("Generation 1: 75.00%", output)
+        self.assertIn("Generation 2: N/A", output)
+
     def test_all_five_perspectives_registered(self):
         organism = SelfDevelopmentOrganism(root_dir=Path(self.tmp_dir))
         expected = {Perspective.USER, Perspective.TEST, Perspective.SYSTEM,
