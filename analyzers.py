@@ -214,6 +214,51 @@ class GitAnalyzer:
         except Exception:
             return []
 
+    def get_total_commits(self) -> int:
+        """Get total number of commits in the repository"""
+        try:
+            result = subprocess.run(
+                ["git", "rev-list", "--count", "HEAD"],
+                cwd=self.root_dir,
+                capture_output=True,
+                text=True
+            )
+            return int(result.stdout.strip())
+        except Exception:
+            return 0
+
+    def get_commit_history_stats(self, count: int = 10) -> Dict[str, int]:
+        """Get code evolution stats (insertions/deletions) for recent commits"""
+        stats = {"insertions": 0, "deletions": 0, "files_changed": 0}
+        try:
+            result = subprocess.run(
+                ["git", "log", f"-{count}", "--format=", "--shortstat"],
+                cwd=self.root_dir,
+                capture_output=True,
+                text=True
+            )
+            import re
+            for line in result.stdout.strip().split("\n"):
+                line = line.strip()
+                if not line:
+                    continue
+                # Example: 1 file changed, 1 insertion(+), 1 deletion(-)
+                files_match = re.search(r'(\d+)\s+file', line)
+                if files_match:
+                    stats["files_changed"] += int(files_match.group(1))
+
+                insertions_match = re.search(r'(\d+)\s+insertion', line)
+                if insertions_match:
+                    stats["insertions"] += int(insertions_match.group(1))
+
+                deletions_match = re.search(r'(\d+)\s+deletion', line)
+                if deletions_match:
+                    stats["deletions"] += int(deletions_match.group(1))
+
+            return stats
+        except Exception:
+            return stats
+
     def get_commits_for_increment(self, increment_number: int) -> List[Dict]:
         """Return commits whose message mentions the given increment number.
 

@@ -83,13 +83,58 @@ class AnalyticsPerspective(PerspectiveAnalyzer):
                     ]
                 ))
 
+        # Check evolutionary state using git history stats
+        total_commits = self.git_analyzer.get_total_commits()
+        if total_commits > 0:
+            stats = self.git_analyzer.get_commit_history_stats(count=10)
+            prompts.append(Prompt(
+                perspective=Perspective.ANALYTICS,
+                priority=Priority.INFO,
+                title="Codebase Evolutionary State",
+                description=f"Repository has {total_commits} total commits. "
+                            f"Recent changes (last 10 commits): {stats['insertions']} insertions, "
+                            f"{stats['deletions']} deletions across {stats['files_changed']} files.",
+                tags=["evolution", "history"]
+            ))
+
+        # Calculate gap to desired state
+        latest_fitness = 0.5
+        if history:
+            latest_fitness = history[-1].get("overall", 0.5)
+
+        target_fitness = 1.0
+        gap = target_fitness - latest_fitness
+        if gap > 0.05:  # more than 5% gap
+            # Only generate prompt if history is sufficient, otherwise the score is just defaults
+            if len(history) >= 2:
+                prompts.append(Prompt(
+                    perspective=Perspective.ANALYTICS,
+                    priority=Priority.MEDIUM,  # Use medium so it doesn't penalize fitness too much
+                    title="System Desired State Gap",
+                    description=f"Current fitness is {latest_fitness:.1%} compared to the target of {target_fitness:.1%}.",
+                    metric_current=latest_fitness * 100,
+                    metric_target=target_fitness * 100,
+                    acceptance_criteria=[
+                        f"Close the {(gap * 100):.1f}% gap to desired state",
+                        "Address critical and high priority prompts across perspectives",
+                        "Improve test coverage and code quality"
+                    ],
+                    tags=["gap-analysis", "fitness"]
+                ))
+
         fitness = 1.0
+        # Only High and Medium *from standard analysis* should penalize.
+        # Let's count penalties specifically:
+        penalty = 0.0
         for prompt in prompts:
+            if prompt.title in ["System Desired State Gap", "Codebase Evolutionary State", "Positive fitness trend", "Insufficient history for trend analysis"]:
+                continue
             if prompt.priority == Priority.HIGH:
-                fitness -= 0.3
+                penalty += 0.3
             elif prompt.priority == Priority.MEDIUM:
-                fitness -= 0.15
-        fitness = max(0.1, fitness)
+                penalty += 0.15
+
+        fitness = max(0.1, fitness - penalty)
         return fitness, prompts
 
 

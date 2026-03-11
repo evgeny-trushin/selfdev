@@ -23,6 +23,8 @@ def _mock_git_analyzer():
     ]
     mock.get_uncommitted_changes.return_value = []
     mock.get_branch.return_value = "main"
+    mock.get_total_commits.return_value = 1
+    mock.get_commit_history_stats.return_value = {"insertions": 10, "deletions": 5, "files_changed": 1}
     return mock
 
 

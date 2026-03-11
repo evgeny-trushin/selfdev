@@ -21,6 +21,8 @@ def _mock_git_analyzer(**overrides):
     mock.get_recent_commits.return_value = overrides.get("commits", [])
     mock.get_uncommitted_changes.return_value = overrides.get("uncommitted", [])
     mock.get_branch.return_value = "main"
+    mock.get_total_commits.return_value = overrides.get("total_commits", 0)
+    mock.get_commit_history_stats.return_value = overrides.get("history_stats", {"insertions": 0, "deletions": 0, "files_changed": 0})
     return mock
 
 
