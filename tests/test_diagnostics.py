@@ -58,6 +58,23 @@ class TestAnalyticsPerspective(unittest.TestCase):
         self.assertEqual(fitness, 0.5)
         self.assertEqual(len(prompts), 1)
 
+    def test_regression_detected_between_generations(self):
+        self.state.fitness_history = [
+            {"overall": 0.8, "generation": 0},
+            {"overall": 0.5, "generation": 1},
+        ]
+        analyzer = self._make_analyzer()
+        fitness, prompts = analyzer.analyze()
+
+        regression_prompts = [p for p in prompts if "Regression detected" in p.title]
+        self.assertEqual(len(regression_prompts), 1)
+        self.assertEqual(regression_prompts[0].priority, Priority.HIGH)
+        self.assertIn("dropped from 80.00% (Gen 0) to 50.00% (Gen 1)", regression_prompts[0].description)
+
+        history_prompts = [p for p in prompts if "Historical fitness data" in p.title]
+        self.assertEqual(len(history_prompts), 1)
+        self.assertEqual(history_prompts[0].priority, Priority.INFO)
+
     def test_exactly_two_history_entries(self):
         """Edge case: 2 entries passes insufficient-history gate but has no older set for trends."""
         self.state.fitness_history = [

@@ -36,6 +36,39 @@ class AnalyticsPerspective(PerspectiveAnalyzer):
                 description="Run more generations to enable trend analysis."
             )]
 
+        last_gen = history[-1]
+        prev_gen = history[-2]
+        last_score = last_gen.get("overall", 0.5)
+        prev_score = prev_gen.get("overall", 0.5)
+
+        if last_score < prev_score - 0.01:
+            prompts.append(Prompt(
+                perspective=Perspective.ANALYTICS,
+                priority=Priority.HIGH,
+                title="Regression detected between generations",
+                description=f"Fitness dropped from {prev_score:.2%} (Gen {prev_gen.get('generation', '?')}) to {last_score:.2%} (Gen {last_gen.get('generation', '?')}).",
+                metric_current=last_score,
+                metric_target=prev_score,
+                acceptance_criteria=[
+                    "Investigate recent changes for regressions",
+                    "Fix failing tests or code quality issues",
+                    "Restore fitness to at least previous generation level"
+                ],
+                tags=["regression"]
+            ))
+
+        history_desc = "Recent fitness scores:\n"
+        for h in history[-5:]:
+            history_desc += f"- Gen {h.get('generation', '?')}: {h.get('overall', 0.5):.2%}\n"
+
+        prompts.append(Prompt(
+            perspective=Perspective.ANALYTICS,
+            priority=Priority.INFO,
+            title="Historical fitness data",
+            description=history_desc.strip(),
+            tags=["history", "trend"]
+        ))
+
         older = history[:-5]
         recent = history[-5:]
         if len(recent) >= 2 and len(older) >= 1:
