@@ -81,14 +81,15 @@ class SelfDevelopmentOrganism:
         responsible for global filtering and printing.
         """
         analyzer = self.perspectives[perspective]
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics) if metrics else 0.0
 
         self.state.fitness_scores[perspective.value] = fitness
 
         prompts = sorted(prompts, key=lambda p: p.priority.value)
 
         if print_results:
-            print(self.formatter.format_header(perspective, fitness, self.state))
+            print(self.formatter.format_header(perspective, fitness, self.state, metrics))
             if prompts:
                 highest = prompts[0].priority
                 filtered = [p for p in prompts if p.priority == highest]
@@ -107,16 +108,22 @@ class SelfDevelopmentOrganism:
         highest priority across *all* of them, and displays only prompts
         at that level.
         """
-        per_perspective: dict[Perspective, tuple[float, list[Prompt]]] = {}
+        per_perspective: dict[Perspective, tuple[float, list[Prompt], dict[str, float]]] = {}
 
         # Phase 1 — collect without printing
         for perspective in Perspective:
-            prompts = self.run_perspective(perspective, print_results=False)
-            fitness = self.state.fitness_scores[perspective.value]
-            per_perspective[perspective] = (fitness, prompts)
+            analyzer = self.perspectives[perspective]
+            metrics, prompts = analyzer.analyze()
+            fitness = sum(metrics.values()) / len(metrics) if metrics else 0.0
+            self.state.fitness_scores[perspective.value] = fitness
+
+            # we also re-sort prompts
+            prompts = sorted(prompts, key=lambda p: p.priority.value)
+
+            per_perspective[perspective] = (fitness, prompts, metrics)
 
         # Determine global highest priority
-        all_prompts = [p for _, ps in per_perspective.values() for p in ps]
+        all_prompts = [p for _, ps, _ in per_perspective.values() for p in ps]
         if all_prompts:
             global_highest = min(all_prompts, key=lambda p: p.priority.value).priority
         else:
@@ -125,8 +132,8 @@ class SelfDevelopmentOrganism:
         # Phase 2 — print, filtering each perspective to global highest
         displayed_prompts: List[Prompt] = []
         for perspective in Perspective:
-            fitness, prompts = per_perspective[perspective]
-            print(self.formatter.format_header(perspective, fitness, self.state))
+            fitness, prompts, metrics = per_perspective[perspective]
+            print(self.formatter.format_header(perspective, fitness, self.state, metrics))
             if global_highest is not None:
                 filtered = [p for p in prompts if p.priority == global_highest]
             else:

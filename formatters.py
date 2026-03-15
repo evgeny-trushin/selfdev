@@ -3,7 +3,7 @@ Output formatting for the Self-Development Organism system.
 """
 
 from collections import defaultdict
-from typing import List
+from typing import Dict, List, Optional
 
 from models import (
     OrganismState,
@@ -44,7 +44,7 @@ class PromptFormatter:
 
         return "\n".join(lines)
 
-    def format_header(self, perspective: Perspective, fitness: float, state: OrganismState) -> str:
+    def format_header(self, perspective: Perspective, fitness: float, state: OrganismState, metrics: Optional[Dict[str, float]] = None) -> str:
         """Format the header for a perspective"""
         stage = state.get_stage()
 
@@ -54,9 +54,17 @@ class PromptFormatter:
             f"  PERSPECTIVE: {perspective.value.upper()}",
             f"  Generation: {state.generation}  |  Stage: {stage.value}",
             f"  Fitness: {fitness:.2%}",
+        ]
+
+        if metrics:
+            lines.append("  Metrics:")
+            for m_name, m_val in metrics.items():
+                lines.append(f"    - {m_name}: {m_val:.2%}")
+
+        lines.extend([
             "=" * 60,
             ""
-        ]
+        ])
         return "\n".join(lines)
 
     def format_summary(self, state: OrganismState, all_prompts: List[Prompt]) -> str:

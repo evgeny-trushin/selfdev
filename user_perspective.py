@@ -7,7 +7,7 @@ Requirements checking is now handled by the increment tracker.
 
 import json
 from pathlib import Path
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 from models import (
     OrganismState,
@@ -24,20 +24,26 @@ class UserPerspective(PerspectiveAnalyzer):
     def get_perspective(self) -> Perspective:
         return Perspective.USER
 
-    def analyze(self) -> Tuple[float, List[Prompt]]:
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
         prompts = []
-        fitness_components = []
+        metrics = {
+            "Usability": 0.5,
+            "Documentation Quality": 0.5,
+            "User Experience Elements": 0.5
+        }
 
-        self._check_readme(fitness_components, prompts)
-        self._check_package_json(fitness_components, prompts)
+        doc_score = self._check_readme(prompts)
+        pkg_score = self._check_package_json(prompts)
 
-        fitness = sum(fitness_components) / len(fitness_components) if fitness_components else 0.5
-        return fitness, prompts
+        metrics["Documentation Quality"] = doc_score
+        metrics["Usability"] = (doc_score + pkg_score) / 2
+        metrics["User Experience Elements"] = pkg_score
 
-    def _check_readme(self, fitness_components, prompts):
+        return metrics, prompts
+
+    def _check_readme(self, prompts) -> float:
         readme_path = self.root_dir / "README.md"
         if not readme_path.exists():
-            fitness_components.append(0.0)
             prompts.append(Prompt(
                 perspective=Perspective.USER,
                 priority=Priority.CRITICAL,
@@ -49,11 +55,10 @@ class UserPerspective(PerspectiveAnalyzer):
                     "Add basic usage instructions"
                 ]
             ))
-            return
+            return 0.0
 
         content = readme_path.read_text()
         score = min(1.0, len(content) / 5000)
-        fitness_components.append(score)
         if len(content) < 500:
             prompts.append(Prompt(
                 perspective=Perspective.USER,
@@ -69,20 +74,19 @@ class UserPerspective(PerspectiveAnalyzer):
                     "Document main features"
                 ]
             ))
+        return score
 
-    def _check_package_json(self, fitness_components, prompts):
+    def _check_package_json(self, prompts) -> float:
         package_json = self.root_dir / "package.json"
         if not package_json.exists():
-            return
+            return 0.5
         try:
             pkg = json.loads(package_json.read_text())
         except json.JSONDecodeError:
-            fitness_components.append(0.0)
-            return
+            return 0.0
         if pkg.get("description"):
-            fitness_components.append(1.0)
+            return 1.0
         else:
-            fitness_components.append(0.5)
             prompts.append(Prompt(
                 perspective=Perspective.USER,
                 priority=Priority.MEDIUM,
@@ -91,4 +95,5 @@ class UserPerspective(PerspectiveAnalyzer):
                 file_path="package.json",
                 acceptance_criteria=["Add meaningful description to package.json"]
             ))
+            return 0.5
 

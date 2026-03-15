@@ -4,7 +4,7 @@ Includes the base class and code-quality perspectives (Test, System).
 """
 
 from pathlib import Path
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 from abc import ABC, abstractmethod
 
 from models import (
@@ -31,8 +31,8 @@ class PerspectiveAnalyzer(ABC):
         self.git_analyzer = GitAnalyzer(root_dir)
 
     @abstractmethod
-    def analyze(self) -> Tuple[float, List[Prompt]]:
-        """Analyze from this perspective. Returns (fitness_score, prompts)"""
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
+        """Analyze from this perspective. Returns (fitness_metrics, prompts)"""
         pass
 
     @abstractmethod
@@ -50,6 +50,12 @@ class TestPerspective(PerspectiveAnalyzer):
     def analyze(self) -> Tuple[float, List[Prompt]]:
         prompts = []
         analyses = self.code_analyzer.get_all_analyses()
+        metrics = {
+            "Code Coverage": 0.0,
+            "Mutation Score": 0.5, # placeholder
+            "Test Pass Rate": 1.0, # placeholder, assumed pass if code is pushed
+            "Data Integrity Validation": 0.5 # placeholder
+        }
 
         source_files = [a for a in analyses.values() if not a.has_tests]
         test_files = [a for a in analyses.values() if a.has_tests]
@@ -69,7 +75,7 @@ class TestPerspective(PerspectiveAnalyzer):
                     "Configure test runner"
                 ]
             ))
-            return 0.0, prompts
+            return metrics, prompts
 
         source_count = len(source_files)
         test_count = len(test_files)
@@ -79,7 +85,7 @@ class TestPerspective(PerspectiveAnalyzer):
         else:
             coverage_ratio = 1.0 if test_count > 0 else 0.5
 
-        fitness = min(1.0, coverage_ratio)
+        metrics["Code Coverage"] = min(1.0, coverage_ratio)
 
         if coverage_ratio < 0.5:
             prompts.append(Prompt(
@@ -116,7 +122,7 @@ class TestPerspective(PerspectiveAnalyzer):
                 ]
             ))
 
-        return fitness, prompts
+        return metrics, prompts
 
     def _is_file_tested(self, source_analysis: FileAnalysis, test_files: List[FileAnalysis]) -> bool:
         """Check if a source file has a corresponding test file"""
@@ -134,9 +140,16 @@ class SystemPerspective(PerspectiveAnalyzer):
     def analyze(self) -> Tuple[float, List[Prompt]]:
         prompts = []
         analyses = self.code_analyzer.get_all_analyses()
+        metrics = {
+            "Complexity": 0.5,
+            "Coupling": 0.5, # placeholder
+            "Cohesion": 0.5, # placeholder
+            "Infrastructure Health": 0.5, # placeholder
+            "Configuration Consistency": 0.5 # placeholder
+        }
 
         if not analyses:
-            return 0.5, [Prompt(
+            return metrics, [Prompt(
                 perspective=Perspective.SYSTEM,
                 priority=Priority.INFO,
                 title="No Python files to analyze",
@@ -152,7 +165,7 @@ class SystemPerspective(PerspectiveAnalyzer):
         long_file_ratio = len(long_files) / len(analyses)
         length_fitness = 1 - long_file_ratio
 
-        fitness = (complexity_fitness + length_fitness) / 2
+        metrics["Complexity"] = (complexity_fitness + length_fitness) / 2
 
         for analysis in long_files:
             prompts.append(Prompt(
@@ -188,4 +201,4 @@ class SystemPerspective(PerspectiveAnalyzer):
                 tags=["complexity", "readability"]
             ))
 
-        return fitness, prompts
+        return metrics, prompts
