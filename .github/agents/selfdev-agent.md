@@ -1,5 +1,5 @@
 ---
-name: dev-agent
+name: selfdev-agent
 description: |
   End-to-end development agent. Takes a user's feature request, creates a requirement in /requirements,
   analyses integration points, runs ./selfdev/develop.sh to get the increment prompt, implements
