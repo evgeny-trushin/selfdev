@@ -4,10 +4,59 @@ An AI-powered code evolution system. It scans your project, generates precise de
 
 ## Table of Contents
 
-1. [Why Selfdev](#why-selfdev)
-2. [How to Use](#how-to-use)
-3. [How It Works](#how-it-works)
-4. [Use Cases](#use-cases)
+1. [What's New: VS Code Agents](#whats-new-vs-code-agents)
+2. [Use Cases](#use-cases)
+3. [Why Selfdev](#why-selfdev)
+4. [How to Use](#how-to-use)
+5. [How It Works](#how-it-works)
+
+---
+
+## What's New: VS Code Agents
+
+Selfdev now ships with four specialized [VS Code agents](https://github.com/evgeny-trushin/selfdev/blob/main/.github/agents/) in `.github/agents/`. Each agent has a dedicated role in the development lifecycle — pick the right one for the task at hand.
+
+![VS Code Agents panel showing selfdev agents](https://selfdev.trushin.vip/img/visual-studio-code-agents.webp)
+
+| Agent | Role |
+|-------|------|
+| **[know-agent](https://github.com/evgeny-trushin/selfdev/blob/main/.github/agents/know-agent.md)** | Knowledge analyst. Scans `principles/`, cross-references with `requirements/` and source code, validates consistency, and produces a structured quality report — preparing the ground for selfdev-agent. |
+| **[selfdev-agent](https://github.com/evgeny-trushin/selfdev/blob/main/.github/agents/selfdev-agent.md)** | End-to-end development agent. Combines plan-agent analysis with do-agent execution in a continuous loop: creates the requirement, implements each increment, runs tests, commits, pushes, and repeats until all increments ship. |
+| **[plan-agent](https://github.com/evgeny-trushin/selfdev/blob/main/.github/agents/plan-agent.md)** *(sub-agent)* | Planning and analysis sub-agent of selfdev-agent. Clarifies the task, reviews git history for patterns, analyses the codebase, and creates a detailed execution plan as a new `requirements/` increment with acceptance criteria. |
+| **[do-agent](https://github.com/evgeny-trushin/selfdev/blob/main/.github/agents/do-agent.md)** *(sub-agent)* | Strict execution sub-agent of selfdev-agent. Picks up the current `_todo_` increment and implements it **exactly** as specified — no deviations, no scope creep. Runs tests, commits with traceability, and halts on any ambiguity for approval. |
+
+---
+
+## Use Cases
+
+### AWS SA Pro Quiz Trainer
+
+[![AWS SA Pro Quiz Trainer](https://selfdev.trushin.vip/img/aws-cert-1.webp)](https://aws-cert.trushin.vip/)
+[![AWS SA Pro Quiz Trainer - Progress Tracking](https://selfdev.trushin.vip/img/aws-cert-2.webp)](https://aws-cert.trushin.vip/)
+[![AWS SA Pro Quiz Trainer - Interactive Mind Map](https://selfdev.trushin.vip/img/aws-cert-3.webp)](https://aws-cert.trushin.vip/)
+[![AWS SA Pro Quiz Trainer - Flashcards and Quiz](https://selfdev.trushin.vip/img/aws-cert-4.webp)](https://aws-cert.trushin.vip/)
+
+**100% Free & No Registration.** A comprehensive study application featuring Smart Quizzes with Bayesian Adaptive Engine, Interactive Mind Map with unseen/weak-area filters, Spaced-Repetition Flashcards (SM-2), Service Mastery Heatmaps with completion projection, near-miss scoring, detailed per-option feedback, and built-in progression limits for optimal retention.
+
+🔗 **[aws-cert.trushin.vip](https://aws-cert.trushin.vip/)**
+
+### System Design Quiz Trainer
+
+[![System Design Quiz Trainer](https://selfdev.trushin.vip/img/system-design-1.webp)](https://system-design.trushin.vip/)
+[![System Design Quiz Trainer - Interactive Mind Map](https://selfdev.trushin.vip/img/system-design-2.webp)](https://system-design.trushin.vip/)
+[![System Design Quiz Trainer - Quiz Explanations](https://selfdev.trushin.vip/img/system-design-3.webp)](https://system-design.trushin.vip/)
+
+**100% Free & No Registration.** A comprehensive study application focused on **Privacy-First** learning (Data Stays Local). Highlights include Adaptive Smart Quizzes, Spaced Repetition Flashcards, an Interactive Mind Map with topic filtering, and detailed Explanations with Architectural Diagrams for deeper comprehension.
+
+🔗 **[system-design.trushin.vip](https://system-design.trushin.vip/)**
+
+### More Projects
+
+| Project | Description |
+|---------|-------------|
+| **[trushin.vip](https://trushin.vip/)** | Portfolio website, 100% created by selfdev logic. |
+| **[cloud-agents.trushin.vip](https://cloud-agents.trushin.vip/)** | The how-to guide on Cloud Agents. |
+| **[selfdev.trushin.vip](https://selfdev.trushin.vip/)** | Selfdev project website, developed by selfdev logic. |
 
 ---
 
@@ -132,7 +181,7 @@ your-project/
 
 ---
 
-## Use Cases
+## Prompt Examples
 
 ### Bootstrap any project
 
