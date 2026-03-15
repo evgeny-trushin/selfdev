@@ -146,26 +146,24 @@ class DebugPerspective(PerspectiveAnalyzer):
         todo_pattern = re.compile(r'#\s*(TODO|FIXME|XXX|HACK|BUG)[\s:]*(.*)', re.IGNORECASE)
         todos = []
 
-        for dir_name in ANALYZABLE_DIRS:
-            dir_path = self.root_dir / dir_name
-            if not dir_path.exists():
+        analyses = self.code_analyzer.get_all_analyses()
+        for file_path_str in analyses.keys():
+            file_path = self.root_dir / file_path_str
+            if not file_path.exists():
                 continue
-            for file_path in dir_path.rglob("*.py"):
-                if "__pycache__" in str(file_path):
-                    continue
-                try:
-                    content = file_path.read_text()
-                    for i, line in enumerate(content.splitlines(), 1):
-                        match = todo_pattern.search(line)
-                        if match:
-                            todos.append({
-                                "file": str(file_path.relative_to(self.root_dir)),
-                                "line": i,
-                                "type": match.group(1).upper(),
-                                "text": match.group(2).strip()
-                            })
-                except Exception:
-                    continue
+            try:
+                content = file_path.read_text()
+                for i, line in enumerate(content.splitlines(), 1):
+                    match = todo_pattern.search(line)
+                    if match:
+                        todos.append({
+                            "file": str(file_path.relative_to(self.root_dir)),
+                            "line": i,
+                            "type": match.group(1).upper(),
+                            "text": match.group(2).strip()
+                        })
+            except Exception:
+                continue
 
         return todos
 
