@@ -192,6 +192,37 @@ class TestSelfDevelopmentOrganism(unittest.TestCase):
             for i in range(len(prompts) - 1):
                 self.assertLessEqual(prompts[i].priority.value, prompts[i + 1].priority.value)
 
+    def test_run_all_perspectives_sorted_by_fitness(self):
+        """run_all_perspectives should output perspectives sorted by fitness score."""
+        organism = SelfDevelopmentOrganism(root_dir=Path(self.tmp_dir))
+        mock_git = _mock_git_analyzer()
+        for p in organism.perspectives.values():
+            p.git_analyzer = mock_git
+
+        # Mock analyze method to return predictable fitness scores
+        organism.perspectives[Perspective.USER].analyze = lambda: (0.9, [])
+        organism.perspectives[Perspective.TEST].analyze = lambda: (0.1, [])
+        organism.perspectives[Perspective.SYSTEM].analyze = lambda: (0.5, [])
+        organism.perspectives[Perspective.ANALYTICS].analyze = lambda: (1.0, [])
+        organism.perspectives[Perspective.DEBUG].analyze = lambda: (0.3, [])
+
+        with patch('sys.stdout', new_callable=lambda: __import__('io').StringIO()) as mock_stdout:
+            organism.run_all_perspectives()
+            output = mock_stdout.getvalue()
+
+        # Find the index of each perspective in the output
+        idx_user = output.find("PERSPECTIVE: USER")
+        idx_test = output.find("PERSPECTIVE: TEST")
+        idx_system = output.find("PERSPECTIVE: SYSTEM")
+        idx_analytics = output.find("PERSPECTIVE: ANALYTICS")
+        idx_debug = output.find("PERSPECTIVE: DEBUG")
+
+        # Expected order: TEST (0.1) < DEBUG (0.3) < SYSTEM (0.5) < USER (0.9) < ANALYTICS (1.0)
+        self.assertLess(idx_test, idx_debug)
+        self.assertLess(idx_debug, idx_system)
+        self.assertLess(idx_system, idx_user)
+        self.assertLess(idx_user, idx_analytics)
+
     def test_print_state_no_fitness(self):
         """Print state when no fitness scores exist."""
         organism = SelfDevelopmentOrganism(root_dir=Path(self.tmp_dir))

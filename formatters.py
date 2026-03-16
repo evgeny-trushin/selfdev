@@ -37,6 +37,9 @@ class PromptFormatter:
         if prompt.metric_current is not None and prompt.metric_target is not None:
             lines.append(f"  Current: {prompt.metric_current:.1f} -> Target: {prompt.metric_target:.1f}")
 
+        if prompt.tags:
+            lines.append(f"  Context (Tags): {', '.join(prompt.tags)}")
+
         if prompt.acceptance_criteria:
             lines.append("  Acceptance Criteria:")
             for criterion in prompt.acceptance_criteria:

@@ -227,6 +227,19 @@ class TestPromptFormatter(unittest.TestCase):
         output = formatter.format_prompt(p)
         self.assertNotIn("Acceptance Criteria", output)
 
+    def test_format_prompt_with_tags_for_context(self):
+        """Prompt with tags should display them as Context (Tags)."""
+        formatter = PromptFormatter()
+        p = Prompt(
+            perspective=Perspective.SYSTEM,
+            priority=Priority.LOW,
+            title="Tags test",
+            description="Desc",
+            tags=["tag1", "tag2"]
+        )
+        output = formatter.format_prompt(p)
+        self.assertIn("Context (Tags): tag1, tag2", output)
+
     def test_format_header_embryonic_stage(self):
         formatter = PromptFormatter()
         state = OrganismState(generation=0)
