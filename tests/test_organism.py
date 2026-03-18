@@ -61,6 +61,31 @@ class TestSelfDevelopmentOrganism(unittest.TestCase):
         self.assertIn("user", organism.state.fitness_scores)
         self.assertIn("test", organism.state.fitness_scores)
 
+    @patch('sys.stdout', new_callable=lambda: __import__('io').StringIO())
+    def test_run_all_perspectives_ordered_by_fitness(self, mock_stdout):
+        organism = SelfDevelopmentOrganism(root_dir=Path(self.tmp_dir))
+        mock_git = _mock_git_analyzer()
+        for p in organism.perspectives.values():
+            p.git_analyzer = mock_git
+
+        # Override the analyze methods to return predictable fitness scores
+        organism.perspectives[Perspective.USER].analyze = lambda: (0.9, [])
+        organism.perspectives[Perspective.TEST].analyze = lambda: (0.1, [])
+        organism.perspectives[Perspective.SYSTEM].analyze = lambda: (0.5, [])
+        organism.perspectives[Perspective.ANALYTICS].analyze = lambda: (0.8, [])
+        organism.perspectives[Perspective.DEBUG].analyze = lambda: (0.3, [])
+
+        organism.run_all_perspectives()
+
+        output = mock_stdout.getvalue()
+
+        # Extract the order of PERSPECTIVE lines from the output
+        import re
+        perspectives_in_output = re.findall(r"PERSPECTIVE: ([A-Z]+)", output)
+
+        expected_order = ["TEST", "DEBUG", "SYSTEM", "ANALYTICS", "USER"]
+        self.assertEqual(perspectives_in_output, expected_order)
+
     def test_advance_generation(self):
         # Create increment files for the tracker to find
         req_dir = Path(self.tmp_dir) / "requirements"
