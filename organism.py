@@ -123,8 +123,14 @@ class SelfDevelopmentOrganism:
             global_highest = None
 
         # Phase 2 — print, filtering each perspective to global highest
+        # Sort perspectives by their evaluated fitness scores in ascending order
+        sorted_perspectives = sorted(
+            Perspective,
+            key=lambda p: per_perspective[p][0]
+        )
+
         displayed_prompts: List[Prompt] = []
-        for perspective in Perspective:
+        for perspective in sorted_perspectives:
             fitness, prompts = per_perspective[perspective]
             print(self.formatter.format_header(perspective, fitness, self.state))
             if global_highest is not None:
