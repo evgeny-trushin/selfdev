@@ -54,9 +54,17 @@ class PromptFormatter:
             f"  PERSPECTIVE: {perspective.value.upper()}",
             f"  Generation: {state.generation}  |  Stage: {stage.value}",
             f"  Fitness: {fitness:.2%}",
+        ]
+
+        if state.fitness_scores:
+            overall = sum(state.fitness_scores.values()) / len(state.fitness_scores)
+            lines.append(f"  Overall System Fitness: {overall:.2%}")
+
+        lines.extend([
             "=" * 60,
             ""
-        ]
+        ])
+
         return "\n".join(lines)
 
     def format_summary(self, state: OrganismState, all_prompts: List[Prompt]) -> str:
