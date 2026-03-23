@@ -7,7 +7,7 @@ Requirements checking is now handled by the increment tracker.
 
 import json
 from pathlib import Path
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 from models import (
     OrganismState,
@@ -24,20 +24,33 @@ class UserPerspective(PerspectiveAnalyzer):
     def get_perspective(self) -> Perspective:
         return Perspective.USER
 
-    def analyze(self) -> Tuple[float, List[Prompt]]:
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
         prompts = []
-        fitness_components = []
 
-        self._check_readme(fitness_components, prompts)
-        self._check_package_json(fitness_components, prompts)
+        # User | Usability, documentation quality, user experience elements
+        metrics = {
+            "usability": 0.5,
+            "documentation_quality": 0.5,
+            "user_experience_elements": 0.5
+        }
 
-        fitness = sum(fitness_components) / len(fitness_components) if fitness_components else 0.5
-        return fitness, prompts
+        doc_fitness_components = []
 
-    def _check_readme(self, fitness_components, prompts):
+        self._check_readme(doc_fitness_components, prompts)
+        self._check_package_json(doc_fitness_components, prompts)
+
+        if doc_fitness_components:
+            metrics["documentation_quality"] = sum(doc_fitness_components) / len(doc_fitness_components)
+            # Default other metrics to doc quality to represent general user fitness
+            metrics["usability"] = metrics["documentation_quality"]
+            metrics["user_experience_elements"] = metrics["documentation_quality"]
+
+        return metrics, prompts
+
+    def _check_readme(self, doc_fitness_components, prompts):
         readme_path = self.root_dir / "README.md"
         if not readme_path.exists():
-            fitness_components.append(0.0)
+            doc_fitness_components.append(0.0)
             prompts.append(Prompt(
                 perspective=Perspective.USER,
                 priority=Priority.CRITICAL,
@@ -53,7 +66,7 @@ class UserPerspective(PerspectiveAnalyzer):
 
         content = readme_path.read_text()
         score = min(1.0, len(content) / 5000)
-        fitness_components.append(score)
+        doc_fitness_components.append(score)
         if len(content) < 500:
             prompts.append(Prompt(
                 perspective=Perspective.USER,
@@ -70,19 +83,19 @@ class UserPerspective(PerspectiveAnalyzer):
                 ]
             ))
 
-    def _check_package_json(self, fitness_components, prompts):
+    def _check_package_json(self, doc_fitness_components, prompts):
         package_json = self.root_dir / "package.json"
         if not package_json.exists():
             return
         try:
             pkg = json.loads(package_json.read_text())
         except json.JSONDecodeError:
-            fitness_components.append(0.0)
+            doc_fitness_components.append(0.0)
             return
         if pkg.get("description"):
-            fitness_components.append(1.0)
+            doc_fitness_components.append(1.0)
         else:
-            fitness_components.append(0.5)
+            doc_fitness_components.append(0.5)
             prompts.append(Prompt(
                 perspective=Perspective.USER,
                 priority=Priority.MEDIUM,

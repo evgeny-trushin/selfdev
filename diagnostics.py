@@ -5,7 +5,7 @@ Analytics (trends/patterns) and Debug (issues/TODOs) perspectives.
 
 import re
 from pathlib import Path
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 from models import (
     OrganismState,
@@ -23,13 +23,21 @@ class AnalyticsPerspective(PerspectiveAnalyzer):
     def get_perspective(self) -> Perspective:
         return Perspective.ANALYTICS
 
-    def analyze(self) -> Tuple[float, List[Prompt]]:
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
         prompts = []
+
+        # Analytics | Feature adoption, user retention, error rate trends, usage patterns
+        metrics = {
+            "feature_adoption": 0.5,
+            "user_retention": 0.5,
+            "error_rate_trends": 0.5,
+            "usage_patterns": 0.5
+        }
 
         history = self.state.fitness_history
 
         if len(history) < 2:
-            return 0.5, [Prompt(
+            return metrics, [Prompt(
                 perspective=Perspective.ANALYTICS,
                 priority=Priority.INFO,
                 title="Insufficient history for trend analysis",
@@ -83,14 +91,22 @@ class AnalyticsPerspective(PerspectiveAnalyzer):
                     ]
                 ))
 
-        fitness = 1.0
+        error_trend_fitness = 1.0
         for prompt in prompts:
             if prompt.priority == Priority.HIGH:
-                fitness -= 0.3
+                error_trend_fitness -= 0.3
             elif prompt.priority == Priority.MEDIUM:
-                fitness -= 0.15
-        fitness = max(0.1, fitness)
-        return fitness, prompts
+                error_trend_fitness -= 0.15
+
+        metrics["error_rate_trends"] = max(0.1, error_trend_fitness)
+
+        # In absence of real telemetry, default other metrics to mirror error trend
+        # so overall fitness matches the error_trend_fitness
+        metrics["feature_adoption"] = metrics["error_rate_trends"]
+        metrics["user_retention"] = metrics["error_rate_trends"]
+        metrics["usage_patterns"] = metrics["error_rate_trends"]
+
+        return metrics, prompts
 
 
 class DebugPerspective(PerspectiveAnalyzer):
@@ -99,8 +115,18 @@ class DebugPerspective(PerspectiveAnalyzer):
     def get_perspective(self) -> Perspective:
         return Perspective.DEBUG
 
-    def analyze(self) -> Tuple[float, List[Prompt]]:
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
         prompts = []
+
+        # Debug | Error count, broken integrations, stale data, deployment failures, infrastructure drift
+        metrics = {
+            "error_count": 0.5,
+            "broken_integrations": 0.5,
+            "stale_data": 0.5,
+            "deployment_failures": 0.5,
+            "infrastructure_drift": 0.5
+        }
+
         analyses = self.code_analyzer.get_all_analyses()
 
         all_issues = []
@@ -137,9 +163,16 @@ class DebugPerspective(PerspectiveAnalyzer):
 
         issue_count = len(all_issues) + len(todos)
         max_issues = 20
-        fitness = max(0.1, 1 - (issue_count / max_issues))
+        fitness = max(0.1, 1.0 - (issue_count / max_issues))
+        metrics["error_count"] = fitness
 
-        return fitness, prompts
+        # Set other metrics to mirror overall fitness for debug perspective
+        metrics["broken_integrations"] = fitness
+        metrics["stale_data"] = fitness
+        metrics["deployment_failures"] = fitness
+        metrics["infrastructure_drift"] = fitness
+
+        return metrics, prompts
 
     def _find_todo_comments(self) -> List[dict]:
         """Scan source directories for TODO/FIXME comments"""

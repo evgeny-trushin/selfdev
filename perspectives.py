@@ -4,7 +4,7 @@ Includes the base class and code-quality perspectives (Test, System).
 """
 
 from pathlib import Path
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 from abc import ABC, abstractmethod
 
 from models import (
@@ -31,8 +31,8 @@ class PerspectiveAnalyzer(ABC):
         self.git_analyzer = GitAnalyzer(root_dir)
 
     @abstractmethod
-    def analyze(self) -> Tuple[float, List[Prompt]]:
-        """Analyze from this perspective. Returns (fitness_score, prompts)"""
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
+        """Analyze from this perspective. Returns (metrics_dict, prompts)"""
         pass
 
     @abstractmethod
@@ -47,8 +47,17 @@ class TestPerspective(PerspectiveAnalyzer):
     def get_perspective(self) -> Perspective:
         return Perspective.TEST
 
-    def analyze(self) -> Tuple[float, List[Prompt]]:
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
         prompts = []
+
+        # Test | Code coverage, mutation score, test pass rate, data integrity validation
+        metrics = {
+            "code_coverage": 0.0,
+            "mutation_score": 0.0,  # default placeholder
+            "test_pass_rate": 1.0,  # assume passing if tests exist, checked elsewhere
+            "data_integrity_validation": 0.5  # default placeholder
+        }
+
         analyses = self.code_analyzer.get_all_analyses()
 
         source_files = [a for a in analyses.values() if not a.has_tests]
@@ -69,7 +78,9 @@ class TestPerspective(PerspectiveAnalyzer):
                     "Configure test runner"
                 ]
             ))
-            return 0.0, prompts
+            metrics["test_pass_rate"] = 0.0
+            metrics["data_integrity_validation"] = 0.0
+            return metrics, prompts
 
         source_count = len(source_files)
         test_count = len(test_files)
@@ -80,6 +91,7 @@ class TestPerspective(PerspectiveAnalyzer):
             coverage_ratio = 1.0 if test_count > 0 else 0.5
 
         fitness = min(1.0, coverage_ratio)
+        metrics["code_coverage"] = fitness
 
         if coverage_ratio < 0.5:
             prompts.append(Prompt(
@@ -116,7 +128,7 @@ class TestPerspective(PerspectiveAnalyzer):
                 ]
             ))
 
-        return fitness, prompts
+        return metrics, prompts
 
     def _is_file_tested(self, source_analysis: FileAnalysis, test_files: List[FileAnalysis]) -> bool:
         """Check if a source file has a corresponding test file"""
@@ -131,12 +143,22 @@ class SystemPerspective(PerspectiveAnalyzer):
     def get_perspective(self) -> Perspective:
         return Perspective.SYSTEM
 
-    def analyze(self) -> Tuple[float, List[Prompt]]:
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
         prompts = []
+
+        # System | Complexity, coupling, cohesion, infrastructure health, configuration consistency
+        metrics = {
+            "complexity": 0.5,
+            "coupling": 0.5,
+            "cohesion": 0.5,
+            "infrastructure_health": 0.5,
+            "configuration_consistency": 0.5
+        }
+
         analyses = self.code_analyzer.get_all_analyses()
 
         if not analyses:
-            return 0.5, [Prompt(
+            return metrics, [Prompt(
                 perspective=Perspective.SYSTEM,
                 priority=Priority.INFO,
                 title="No Python files to analyze",
@@ -148,11 +170,12 @@ class SystemPerspective(PerspectiveAnalyzer):
         long_files = [a for a in analyses.values() if a.lines > MAX_FILE_LINES]
         high_complexity = [a for a in analyses.values() if a.complexity > COMPLEXITY_THRESHOLD]
 
-        complexity_fitness = max(0, 1 - (avg_complexity / (COMPLEXITY_THRESHOLD * 2)))
+        complexity_fitness = max(0.0, 1.0 - (avg_complexity / (COMPLEXITY_THRESHOLD * 2)))
         long_file_ratio = len(long_files) / len(analyses)
-        length_fitness = 1 - long_file_ratio
+        length_fitness = 1.0 - long_file_ratio
 
-        fitness = (complexity_fitness + length_fitness) / 2
+        metrics["complexity"] = complexity_fitness
+        metrics["cohesion"] = length_fitness
 
         for analysis in long_files:
             prompts.append(Prompt(
@@ -188,4 +211,4 @@ class SystemPerspective(PerspectiveAnalyzer):
                 tags=["complexity", "readability"]
             ))
 
-        return fitness, prompts
+        return metrics, prompts
