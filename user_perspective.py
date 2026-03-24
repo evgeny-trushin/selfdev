@@ -7,7 +7,7 @@ Requirements checking is now handled by the increment tracker.
 
 import json
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 from models import (
     OrganismState,
@@ -24,15 +24,23 @@ class UserPerspective(PerspectiveAnalyzer):
     def get_perspective(self) -> Perspective:
         return Perspective.USER
 
-    def analyze(self) -> Tuple[float, List[Prompt]]:
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
         prompts = []
         fitness_components = []
 
         self._check_readme(fitness_components, prompts)
         self._check_package_json(fitness_components, prompts)
 
-        fitness = sum(fitness_components) / len(fitness_components) if fitness_components else 0.5
-        return fitness, prompts
+        # documentation quality is based on fitness_components (which tests README and package.json)
+        doc_quality = sum(fitness_components) / len(fitness_components) if fitness_components else 0.5
+
+        metrics = {
+            "usability": 0.5, # default
+            "documentation quality": doc_quality,
+            "user experience elements": 0.5 # default
+        }
+
+        return metrics, prompts
 
     def _check_readme(self, fitness_components, prompts):
         readme_path = self.root_dir / "README.md"

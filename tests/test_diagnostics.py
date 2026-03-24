@@ -46,7 +46,8 @@ class TestAnalyticsPerspective(unittest.TestCase):
     def test_insufficient_history_single_entry(self):
         self.state.fitness_history = [{"overall": 0.5, "generation": 0}]
         analyzer = self._make_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         self.assertEqual(fitness, 0.5)
         self.assertEqual(len(prompts), 1)
         self.assertEqual(prompts[0].priority, Priority.INFO)
@@ -54,7 +55,8 @@ class TestAnalyticsPerspective(unittest.TestCase):
 
     def test_insufficient_history_empty(self):
         analyzer = self._make_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         self.assertEqual(fitness, 0.5)
         self.assertEqual(len(prompts), 1)
 
@@ -65,7 +67,8 @@ class TestAnalyticsPerspective(unittest.TestCase):
             {"overall": 0.6, "generation": 1},
         ]
         analyzer = self._make_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         # Should not return the "Insufficient history" prompt
         info_prompts = [p for p in prompts if "Insufficient" in p.title]
         self.assertEqual(len(info_prompts), 0)
@@ -82,7 +85,8 @@ class TestAnalyticsPerspective(unittest.TestCase):
             {"overall": 0.8, "generation": i} for i in range(1, 6)  # recent
         ]
         analyzer = self._make_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         positive = [p for p in prompts if "positive" in p.title.lower()]
         self.assertGreater(len(positive), 0)
 
@@ -92,7 +96,8 @@ class TestAnalyticsPerspective(unittest.TestCase):
             + [{"overall": 0.3, "generation": i} for i in range(6, 11)]
         )
         analyzer = self._make_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         declining = [p for p in prompts if "declining" in p.title.lower()]
         self.assertGreater(len(declining), 0)
         self.assertEqual(declining[0].priority, Priority.HIGH)
@@ -103,7 +108,8 @@ class TestAnalyticsPerspective(unittest.TestCase):
             + [{"overall": 0.9, "generation": i} for i in range(6, 11)]
         )
         analyzer = self._make_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         positive = [p for p in prompts if "positive" in p.title.lower()]
         self.assertGreater(len(positive), 0)
         self.assertEqual(positive[0].priority, Priority.INFO)
@@ -115,7 +121,8 @@ class TestAnalyticsPerspective(unittest.TestCase):
             + [{"overall": 0.55, "generation": i} for i in range(6, 11)]
         )
         analyzer = self._make_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         trend_prompts = [p for p in prompts
                          if "declining" in p.title.lower() or "positive" in p.title.lower()]
         self.assertEqual(len(trend_prompts), 0)
@@ -131,7 +138,8 @@ class TestAnalyticsPerspective(unittest.TestCase):
             {"hash": "feat0", "message": "add feature", "date": "2026-01-01"},
         ]
         analyzer = self._make_analyzer(commits=commits)
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         fix_prompts = [p for p in prompts if "fix rate" in p.title.lower()]
         self.assertGreater(len(fix_prompts), 0)
         self.assertEqual(fix_prompts[0].priority, Priority.MEDIUM)
@@ -147,7 +155,8 @@ class TestAnalyticsPerspective(unittest.TestCase):
             {"hash": "fix0", "message": "fix typo", "date": "2026-01-01"},
         ]
         analyzer = self._make_analyzer(commits=commits)
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         fix_prompts = [p for p in prompts if "fix rate" in p.title.lower()]
         self.assertEqual(len(fix_prompts), 0)
 
@@ -156,7 +165,8 @@ class TestAnalyticsPerspective(unittest.TestCase):
             {"overall": 0.5, "generation": i} for i in range(3)
         ]
         analyzer = self._make_analyzer(commits=[])
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         fix_prompts = [p for p in prompts if "fix rate" in p.title.lower()]
         self.assertEqual(len(fix_prompts), 0)
 
@@ -166,8 +176,10 @@ class TestAnalyticsPerspective(unittest.TestCase):
             {"overall": 0.5, "generation": i} for i in range(3)
         ]
         analyzer = self._make_analyzer()
-        fitness, _ = analyzer.analyze()
-        self.assertEqual(fitness, 1.0)
+        metrics, _ = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
+        # error rate trends is 1.0, other 3 are 0.5 -> average 0.625
+        self.assertEqual(fitness, 0.625)
 
     def test_fitness_reduced_by_declining_trend(self):
         """Declining trend (HIGH priority) reduces fitness by 0.3."""
@@ -176,8 +188,10 @@ class TestAnalyticsPerspective(unittest.TestCase):
             + [{"overall": 0.3, "generation": i} for i in range(6, 11)]
         )
         analyzer = self._make_analyzer()
-        fitness, _ = analyzer.analyze()
-        self.assertEqual(fitness, 0.7)
+        metrics, _ = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
+        # error rate trends is 0.7, other 3 are 0.5 -> average 0.55
+        self.assertEqual(fitness, 0.55)
 
     def test_fitness_reduced_by_high_fix_rate(self):
         """High fix rate (MEDIUM priority) reduces fitness by 0.15."""
@@ -191,8 +205,10 @@ class TestAnalyticsPerspective(unittest.TestCase):
             {"hash": "feat0", "message": "add feature", "date": "2026-01-01"},
         ]
         analyzer = self._make_analyzer(commits=commits)
-        fitness, _ = analyzer.analyze()
-        self.assertEqual(fitness, 0.85)
+        metrics, _ = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
+        # error rate trends is 0.85, other 3 are 0.5 -> average 0.5875
+        self.assertEqual(fitness, 0.5875)
 
     def test_fitness_reduced_by_both_issues(self):
         """Both declining trend and high fix rate reduce fitness cumulatively."""
@@ -207,13 +223,16 @@ class TestAnalyticsPerspective(unittest.TestCase):
             {"hash": "feat0", "message": "add feature", "date": "2026-01-01"},
         ]
         analyzer = self._make_analyzer(commits=commits)
-        fitness, _ = analyzer.analyze()
-        self.assertAlmostEqual(fitness, 0.55)
+        metrics, _ = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
+        # error rate trends is 0.55, other 3 are 0.5 -> average 0.5125
+        self.assertAlmostEqual(fitness, 0.5125)
 
     def test_fitness_is_0_5_without_history(self):
         """Analytics fitness is 0.5 when history is insufficient (early return)."""
         analyzer = self._make_analyzer()
-        fitness, _ = analyzer.analyze()
+        metrics, _ = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         self.assertEqual(fitness, 0.5)
 
     def test_missing_overall_key_defaults_to_0_5(self):
@@ -223,7 +242,8 @@ class TestAnalyticsPerspective(unittest.TestCase):
             + [{"generation": i} for i in range(6, 11)]
         )
         analyzer = self._make_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         # All entries default to 0.5, so trend should be ~0 (neutral)
         trend_prompts = [p for p in prompts
                          if "declining" in p.title.lower() or "positive" in p.title.lower()]
@@ -250,13 +270,15 @@ class TestDebugPerspective(unittest.TestCase):
 
     def test_clean_codebase_high_fitness(self):
         analyzer = self._make_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         self.assertEqual(fitness, 1.0)
         self.assertEqual(len(prompts), 0)
 
     def test_uncommitted_changes_prompt(self):
         analyzer = self._make_analyzer(uncommitted=["M file.py", "?? new.py"])
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         uncommitted = [p for p in prompts if "uncommitted" in p.title.lower()]
         self.assertGreater(len(uncommitted), 0)
         self.assertEqual(uncommitted[0].priority, Priority.MEDIUM)
@@ -267,7 +289,8 @@ class TestDebugPerspective(unittest.TestCase):
         src.mkdir()
         (src / "module.py").write_text("# TODO: implement this\ndef func(): pass\n")
         analyzer = self._make_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         todo_prompts = [p for p in prompts if "todo" in p.tags]
         self.assertGreater(len(todo_prompts), 0)
         self.assertEqual(todo_prompts[0].priority, Priority.MEDIUM)
@@ -277,7 +300,8 @@ class TestDebugPerspective(unittest.TestCase):
         src.mkdir()
         (src / "module.py").write_text("# FIXME: critical bug here\ndef func(): pass\n")
         analyzer = self._make_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         fixme_prompts = [p for p in prompts if "fixme" in p.tags]
         self.assertGreater(len(fixme_prompts), 0)
         self.assertEqual(fixme_prompts[0].priority, Priority.HIGH)
@@ -287,7 +311,8 @@ class TestDebugPerspective(unittest.TestCase):
         src.mkdir()
         (src / "module.py").write_text("# BUG: race condition\ndef func(): pass\n")
         analyzer = self._make_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         bug_prompts = [p for p in prompts if "bug" in p.tags]
         self.assertGreater(len(bug_prompts), 0)
         self.assertEqual(bug_prompts[0].priority, Priority.HIGH)
@@ -299,7 +324,8 @@ class TestDebugPerspective(unittest.TestCase):
             "# XXX: questionable approach\n# HACK: temporary workaround\n"
         )
         analyzer = self._make_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         tags = {tag for p in prompts for tag in p.tags}
         self.assertIn("xxx", tags)
         self.assertIn("hack", tags)
@@ -311,7 +337,8 @@ class TestDebugPerspective(unittest.TestCase):
         lines = [f"# TODO: item {i}" for i in range(15)]
         (src / "module.py").write_text("\n".join(lines))
         analyzer = self._make_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         todo_prompts = [p for p in prompts if "todo" in p.tags]
         self.assertLessEqual(len(todo_prompts), 10)
 
@@ -321,14 +348,16 @@ class TestDebugPerspective(unittest.TestCase):
         cache.mkdir(parents=True)
         (cache / "module.cpython-311.py").write_text("# TODO: should be ignored\n")
         analyzer = self._make_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         todo_prompts = [p for p in prompts if "todo" in p.tags]
         self.assertEqual(len(todo_prompts), 0)
 
     def test_nonexistent_analyzable_dir_no_error(self):
         """Scanning directories that don't exist should not raise."""
         analyzer = self._make_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         self.assertIsInstance(prompts, list)
 
     def test_fitness_floor_at_0_1(self):
@@ -338,7 +367,8 @@ class TestDebugPerspective(unittest.TestCase):
         lines = [f"# TODO: item {i}" for i in range(30)]
         (src / "module.py").write_text("\n".join(lines))
         analyzer = self._make_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         self.assertGreaterEqual(fitness, 0.1)
 
     def test_todo_file_location_in_prompt(self):
@@ -346,7 +376,8 @@ class TestDebugPerspective(unittest.TestCase):
         src.mkdir()
         (src / "handler.py").write_text("# TODO: refactor this handler\n")
         analyzer = self._make_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         todo_prompts = [p for p in prompts if "todo" in p.tags]
         self.assertGreater(len(todo_prompts), 0)
         self.assertIn("handler.py", todo_prompts[0].file_path)
@@ -357,7 +388,8 @@ class TestDebugPerspective(unittest.TestCase):
         src.mkdir()
         (src / "module.py").write_text("# TODO: implement feature X\n")
         analyzer = self._make_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         todo_prompts = [p for p in prompts if "todo" in p.tags]
         self.assertGreater(len(todo_prompts), 0)
         self.assertIn("implement feature X", todo_prompts[0].title)
@@ -367,7 +399,8 @@ class TestDebugPerspective(unittest.TestCase):
         src.mkdir()
         (src / "module.py").write_text("# TODO implement feature Y\n")
         analyzer = self._make_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         todo_prompts = [p for p in prompts if "todo" in p.tags]
         self.assertGreater(len(todo_prompts), 0)
 
@@ -376,7 +409,8 @@ class TestDebugPerspective(unittest.TestCase):
         src.mkdir()
         (src / "module.py").write_text("# todo: lowercase todo\n# Todo: mixed case\n")
         analyzer = self._make_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         todo_prompts = [p for p in prompts if "todo" in p.tags]
         self.assertEqual(len(todo_prompts), 2)
 
@@ -386,7 +420,8 @@ class TestDebugPerspective(unittest.TestCase):
         (src / "a.py").write_text("# TODO: fix A\n")
         (src / "b.py").write_text("# TODO: fix B\n")
         analyzer = self._make_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         todo_prompts = [p for p in prompts if "todo" in p.tags]
         self.assertEqual(len(todo_prompts), 2)
         files = {p.file_path for p in todo_prompts}
@@ -398,7 +433,8 @@ class TestDebugPerspective(unittest.TestCase):
         src.mkdir()
         (src / "module.py").write_text("# TODO: fix this\n# FIXME: broken\n")
         analyzer = self._make_analyzer(uncommitted=["M file.py"])
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         self.assertLess(fitness, 1.0)
         self.assertGreater(len(prompts), 1)
 
@@ -408,7 +444,8 @@ class TestDebugPerspective(unittest.TestCase):
         src.mkdir()
         (src / "big.py").write_text("\n".join(["x = 1"] * 400))
         analyzer = self._make_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
+        fitness = sum(metrics.values()) / len(metrics)
         code_prompts = [p for p in prompts if "code-quality" in p.tags]
         self.assertGreater(len(code_prompts), 0)
         self.assertIn("too long", code_prompts[0].description.lower())

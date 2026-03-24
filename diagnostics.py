@@ -5,7 +5,7 @@ Analytics (trends/patterns) and Debug (issues/TODOs) perspectives.
 
 import re
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 from models import (
     OrganismState,
@@ -23,13 +23,20 @@ class AnalyticsPerspective(PerspectiveAnalyzer):
     def get_perspective(self) -> Perspective:
         return Perspective.ANALYTICS
 
-    def analyze(self) -> Tuple[float, List[Prompt]]:
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
         prompts = []
 
         history = self.state.fitness_history
 
+        metrics = {
+            "feature adoption": 0.5, # default
+            "user retention": 0.5, # default
+            "error rate trends": 0.5,
+            "usage patterns": 0.5 # default
+        }
+
         if len(history) < 2:
-            return 0.5, [Prompt(
+            return metrics, [Prompt(
                 perspective=Perspective.ANALYTICS,
                 priority=Priority.INFO,
                 title="Insufficient history for trend analysis",
@@ -90,7 +97,8 @@ class AnalyticsPerspective(PerspectiveAnalyzer):
             elif prompt.priority == Priority.MEDIUM:
                 fitness -= 0.15
         fitness = max(0.1, fitness)
-        return fitness, prompts
+        metrics["error rate trends"] = fitness
+        return metrics, prompts
 
 
 class DebugPerspective(PerspectiveAnalyzer):
@@ -99,7 +107,7 @@ class DebugPerspective(PerspectiveAnalyzer):
     def get_perspective(self) -> Perspective:
         return Perspective.DEBUG
 
-    def analyze(self) -> Tuple[float, List[Prompt]]:
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
         prompts = []
         analyses = self.code_analyzer.get_all_analyses()
 
@@ -139,7 +147,15 @@ class DebugPerspective(PerspectiveAnalyzer):
         max_issues = 20
         fitness = max(0.1, 1 - (issue_count / max_issues))
 
-        return fitness, prompts
+        metrics = {
+            "error count": fitness,
+            "broken integrations": 1.0, # default
+            "stale data": 1.0, # default
+            "deployment failures": 1.0, # default
+            "infrastructure drift": 1.0 # default
+        }
+
+        return metrics, prompts
 
     def _find_todo_comments(self) -> List[dict]:
         """Scan source directories for TODO/FIXME comments"""
