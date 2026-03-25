@@ -57,10 +57,12 @@ class TestPromptFormatter(unittest.TestCase):
     def test_format_header(self):
         formatter = PromptFormatter()
         state = OrganismState(generation=5)
+        state.fitness_scores = {"user": 0.8, "test": 0.6}
         output = formatter.format_header(Perspective.USER, 0.75, state)
         self.assertIn("USER", output)
         self.assertIn("75.00%", output)
         self.assertIn("growth", output)
+        self.assertIn("Overall System Fitness: 70.00%", output)
 
     def test_format_summary(self):
         formatter = PromptFormatter()
