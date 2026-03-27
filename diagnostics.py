@@ -142,7 +142,7 @@ class DebugPerspective(PerspectiveAnalyzer):
         return fitness, prompts
 
     def _find_todo_comments(self) -> List[dict]:
-        """Scan source directories for TODO/FIXME comments"""
+        """Scan source directories for TODO/FIXME comments, skipping test files"""
         todo_pattern = re.compile(r'#\s*(TODO|FIXME|XXX|HACK|BUG)[\s:]*(.*)', re.IGNORECASE)
         todos = []
 
@@ -150,6 +150,9 @@ class DebugPerspective(PerspectiveAnalyzer):
         for file_path_str in analyses.keys():
             file_path = self.root_dir / file_path_str
             if not file_path.exists():
+                continue
+            # Skip test files — markers inside them are test fixtures, not real issues
+            if file_path.name.startswith("test_") or "/tests/" in str(file_path):
                 continue
             try:
                 content = file_path.read_text()
