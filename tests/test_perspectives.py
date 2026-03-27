@@ -48,7 +48,7 @@ class TestUserPerspective(unittest.TestCase):
         fitness, prompts = analyzer.analyze()
         critical = [p for p in prompts if p.priority == Priority.CRITICAL]
         self.assertEqual(len(critical), 0)
-        self.assertGreater(fitness, 0.5)
+        self.assertGreater(sum(fitness.values())/len(fitness), 0.5)
 
     def test_short_readme_high_prompt(self):
         (Path(self.tmp_dir) / "README.md").write_text("# Hi")
@@ -64,7 +64,7 @@ class TestUserPerspective(unittest.TestCase):
         )
         analyzer = UserPerspective(Path(self.tmp_dir), self.state)
         fitness, prompts = analyzer.analyze()
-        self.assertGreater(fitness, 0.5)
+        self.assertGreater(sum(fitness.values())/len(fitness), 0.5)
 
     def test_package_json_without_description(self):
         (Path(self.tmp_dir) / "README.md").write_text("# Project\n" + "x" * 5000)
@@ -93,7 +93,7 @@ class TestUserPerspective(unittest.TestCase):
         (Path(self.tmp_dir) / "README.md").write_text("# Project\n" + "x" * 5000)
         analyzer = UserPerspective(Path(self.tmp_dir), self.state)
         fitness, prompts = analyzer.analyze()
-        self.assertIsInstance(fitness, float)
+        self.assertIsInstance(fitness, dict)
         self.assertIsInstance(prompts, list)
 
 
@@ -109,7 +109,7 @@ class TestTestPerspective(unittest.TestCase):
     def test_no_test_dir_critical(self):
         analyzer = TestPerspective(Path(self.tmp_dir), self.state)
         fitness, prompts = analyzer.analyze()
-        self.assertEqual(fitness, 0.0)
+        self.assertEqual(sum(fitness.values())/len(fitness), 0.0)
         critical = [p for p in prompts if p.priority == Priority.CRITICAL]
         self.assertGreater(len(critical), 0)
 
@@ -131,7 +131,7 @@ class TestTestPerspective(unittest.TestCase):
         (Path(self.tmp_dir) / "tests" / "test_a.py").write_text("def test_a(): pass")
         analyzer = TestPerspective(Path(self.tmp_dir), self.state)
         fitness, prompts = analyzer.analyze()
-        self.assertGreater(fitness, 0.0)
+        self.assertGreater(sum(fitness.values())/len(fitness), 0.0)
 
     def test_with_source_and_test_files(self):
         src = Path(self.tmp_dir) / "src"
@@ -142,7 +142,7 @@ class TestTestPerspective(unittest.TestCase):
         (tests / "test_module.py").write_text("def test_func(): pass")
         analyzer = TestPerspective(Path(self.tmp_dir), self.state)
         fitness, prompts = analyzer.analyze()
-        self.assertGreater(fitness, 0.0)
+        self.assertGreater(sum(fitness.values())/len(fitness), 0.0)
 
     def test_low_coverage_prompt(self):
         src = Path(self.tmp_dir) / "src"
@@ -170,7 +170,7 @@ class TestSystemPerspective(unittest.TestCase):
     def test_no_files_info_prompt(self):
         analyzer = SystemPerspective(Path(self.tmp_dir), self.state)
         fitness, prompts = analyzer.analyze()
-        self.assertEqual(fitness, 0.5)
+        self.assertEqual(sum(fitness.values())/len(fitness), 0.5)
         self.assertEqual(len(prompts), 1)
         self.assertEqual(prompts[0].priority, Priority.INFO)
 
@@ -180,7 +180,7 @@ class TestSystemPerspective(unittest.TestCase):
         (src / "module.py").write_text("def func(): pass")
         analyzer = SystemPerspective(Path(self.tmp_dir), self.state)
         fitness, prompts = analyzer.analyze()
-        self.assertGreater(fitness, 0.0)
+        self.assertGreater(sum(fitness.values())/len(fitness), 0.0)
 
     def test_long_file_refactor_prompt(self):
         src = Path(self.tmp_dir) / "src"
@@ -218,7 +218,7 @@ class TestAnalyticsPerspective(unittest.TestCase):
         analyzer = AnalyticsPerspective(Path(self.tmp_dir), state)
         analyzer.git_analyzer = _mock_git_analyzer()
         fitness, prompts = analyzer.analyze()
-        self.assertEqual(fitness, 0.5)
+        self.assertEqual(sum(fitness.values())/len(fitness), 0.5)
         self.assertEqual(prompts[0].priority, Priority.INFO)
 
     def test_with_history_declining_trend(self):
@@ -280,7 +280,7 @@ class TestDebugPerspective(unittest.TestCase):
         analyzer = DebugPerspective(Path(self.tmp_dir), self.state)
         analyzer.git_analyzer = _mock_git_analyzer()
         fitness, prompts = analyzer.analyze()
-        self.assertGreater(fitness, 0.5)
+        self.assertGreater(sum(fitness.values())/len(fitness), 0.5)
 
     def test_uncommitted_changes(self):
         mock_git = _mock_git_analyzer()
@@ -309,7 +309,7 @@ class TestDebugPerspective(unittest.TestCase):
         analyzer = DebugPerspective(Path(self.tmp_dir), self.state)
         analyzer.git_analyzer = _mock_git_analyzer()
         fitness, prompts = analyzer.analyze()
-        self.assertLess(fitness, 0.5)
+        self.assertLess(fitness['error_count'], 0.5)
 
 
 if __name__ == "__main__":

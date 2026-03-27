@@ -47,7 +47,7 @@ class TestAnalyticsPerspective(unittest.TestCase):
         self.state.fitness_history = [{"overall": 0.5, "generation": 0}]
         analyzer = self._make_analyzer()
         fitness, prompts = analyzer.analyze()
-        self.assertEqual(fitness, 0.5)
+        self.assertEqual(sum(fitness.values())/len(fitness), 0.5)
         self.assertEqual(len(prompts), 1)
         self.assertEqual(prompts[0].priority, Priority.INFO)
         self.assertIn("Insufficient", prompts[0].title)
@@ -55,7 +55,7 @@ class TestAnalyticsPerspective(unittest.TestCase):
     def test_insufficient_history_empty(self):
         analyzer = self._make_analyzer()
         fitness, prompts = analyzer.analyze()
-        self.assertEqual(fitness, 0.5)
+        self.assertEqual(sum(fitness.values())/len(fitness), 0.5)
         self.assertEqual(len(prompts), 1)
 
     def test_exactly_two_history_entries(self):
@@ -167,7 +167,7 @@ class TestAnalyticsPerspective(unittest.TestCase):
         ]
         analyzer = self._make_analyzer()
         fitness, _ = analyzer.analyze()
-        self.assertEqual(fitness, 1.0)
+        self.assertEqual(fitness['error_rate_trends'], 1.0)
 
     def test_fitness_reduced_by_declining_trend(self):
         """Declining trend (HIGH priority) reduces fitness by 0.3."""
@@ -177,7 +177,7 @@ class TestAnalyticsPerspective(unittest.TestCase):
         )
         analyzer = self._make_analyzer()
         fitness, _ = analyzer.analyze()
-        self.assertEqual(fitness, 0.7)
+        self.assertEqual(fitness['error_rate_trends'], 0.7)
 
     def test_fitness_reduced_by_high_fix_rate(self):
         """High fix rate (MEDIUM priority) reduces fitness by 0.15."""
@@ -192,7 +192,7 @@ class TestAnalyticsPerspective(unittest.TestCase):
         ]
         analyzer = self._make_analyzer(commits=commits)
         fitness, _ = analyzer.analyze()
-        self.assertEqual(fitness, 0.85)
+        self.assertEqual(fitness['error_rate_trends'], 0.85)
 
     def test_fitness_reduced_by_both_issues(self):
         """Both declining trend and high fix rate reduce fitness cumulatively."""
@@ -208,13 +208,13 @@ class TestAnalyticsPerspective(unittest.TestCase):
         ]
         analyzer = self._make_analyzer(commits=commits)
         fitness, _ = analyzer.analyze()
-        self.assertAlmostEqual(fitness, 0.55)
+        self.assertAlmostEqual(fitness['error_rate_trends'], 0.55)
 
     def test_fitness_is_0_5_without_history(self):
         """Analytics fitness is 0.5 when history is insufficient (early return)."""
         analyzer = self._make_analyzer()
         fitness, _ = analyzer.analyze()
-        self.assertEqual(fitness, 0.5)
+        self.assertEqual(sum(fitness.values())/len(fitness), 0.5)
 
     def test_missing_overall_key_defaults_to_0_5(self):
         """History entries without 'overall' key should default to 0.5."""
@@ -251,7 +251,7 @@ class TestDebugPerspective(unittest.TestCase):
     def test_clean_codebase_high_fitness(self):
         analyzer = self._make_analyzer()
         fitness, prompts = analyzer.analyze()
-        self.assertEqual(fitness, 1.0)
+        self.assertEqual(fitness['error_count'], 1.0)
         self.assertEqual(len(prompts), 0)
 
     def test_uncommitted_changes_prompt(self):
@@ -339,7 +339,7 @@ class TestDebugPerspective(unittest.TestCase):
         (src / "module.py").write_text("\n".join(lines))
         analyzer = self._make_analyzer()
         fitness, prompts = analyzer.analyze()
-        self.assertGreaterEqual(fitness, 0.1)
+        self.assertGreaterEqual(sum(fitness.values())/len(fitness), 0.1)
 
     def test_todo_file_location_in_prompt(self):
         src = Path(self.tmp_dir) / "src"
@@ -399,7 +399,7 @@ class TestDebugPerspective(unittest.TestCase):
         (src / "module.py").write_text("# TODO: fix this\n# FIXME: broken\n")
         analyzer = self._make_analyzer(uncommitted=["M file.py"])
         fitness, prompts = analyzer.analyze()
-        self.assertLess(fitness, 1.0)
+        self.assertLess(sum(fitness.values())/len(fitness), 1.0)
         self.assertGreater(len(prompts), 1)
 
     def test_code_quality_issues_generate_prompts(self):

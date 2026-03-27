@@ -81,14 +81,19 @@ class SelfDevelopmentOrganism:
         responsible for global filtering and printing.
         """
         analyzer = self.perspectives[perspective]
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
 
-        self.state.fitness_scores[perspective.value] = fitness
+        if metrics:
+            overall_fitness = sum(metrics.values()) / len(metrics)
+        else:
+            overall_fitness = 0.5
+
+        self.state.fitness_scores[perspective.value] = overall_fitness
 
         prompts = sorted(prompts, key=lambda p: p.priority.value)
 
         if print_results:
-            print(self.formatter.format_header(perspective, fitness, self.state))
+            print(self.formatter.format_header(perspective, overall_fitness, self.state))
             if prompts:
                 highest = prompts[0].priority
                 filtered = [p for p in prompts if p.priority == highest]
@@ -112,8 +117,8 @@ class SelfDevelopmentOrganism:
         # Phase 1 — collect without printing
         for perspective in Perspective:
             prompts = self.run_perspective(perspective, print_results=False)
-            fitness = self.state.fitness_scores[perspective.value]
-            per_perspective[perspective] = (fitness, prompts)
+            overall_fitness = self.state.fitness_scores[perspective.value]
+            per_perspective[perspective] = (overall_fitness, prompts)
 
         # Determine global highest priority
         all_prompts = [p for _, ps in per_perspective.values() for p in ps]
@@ -123,8 +128,11 @@ class SelfDevelopmentOrganism:
             global_highest = None
 
         # Phase 2 — print, filtering each perspective to global highest
+        # Sort perspectives by fitness ascending (worst-performing first)
+        sorted_perspectives = sorted(Perspective, key=lambda p: per_perspective[p][0])
+
         displayed_prompts: List[Prompt] = []
-        for perspective in Perspective:
+        for perspective in sorted_perspectives:
             fitness, prompts = per_perspective[perspective]
             print(self.formatter.format_header(perspective, fitness, self.state))
             if global_highest is not None:

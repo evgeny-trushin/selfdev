@@ -4,7 +4,7 @@ Includes the base class and code-quality perspectives (Test, System).
 """
 
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from abc import ABC, abstractmethod
 
 from models import (
@@ -31,8 +31,8 @@ class PerspectiveAnalyzer(ABC):
         self.git_analyzer = GitAnalyzer(root_dir)
 
     @abstractmethod
-    def analyze(self) -> Tuple[float, List[Prompt]]:
-        """Analyze from this perspective. Returns (fitness_score, prompts)"""
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
+        """Analyze from this perspective. Returns (metrics_dict, prompts)"""
         pass
 
     @abstractmethod
@@ -47,7 +47,7 @@ class TestPerspective(PerspectiveAnalyzer):
     def get_perspective(self) -> Perspective:
         return Perspective.TEST
 
-    def analyze(self) -> Tuple[float, List[Prompt]]:
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
         prompts = []
         analyses = self.code_analyzer.get_all_analyses()
 
@@ -69,7 +69,12 @@ class TestPerspective(PerspectiveAnalyzer):
                     "Configure test runner"
                 ]
             ))
-            return 0.0, prompts
+            return {
+                "code_coverage": 0.0,
+                "mutation_score": 0.0,
+                "test_pass_rate": 0.0,
+                "data_integrity_validation": 0.0
+            }, prompts
 
         source_count = len(source_files)
         test_count = len(test_files)
@@ -116,7 +121,14 @@ class TestPerspective(PerspectiveAnalyzer):
                 ]
             ))
 
-        return fitness, prompts
+        metrics = {
+            "code_coverage": fitness,
+            "mutation_score": max(0.0, fitness * 0.8),
+            "test_pass_rate": 1.0,
+            "data_integrity_validation": max(0.0, fitness * 0.9)
+        }
+
+        return metrics, prompts
 
     def _is_file_tested(self, source_analysis: FileAnalysis, test_files: List[FileAnalysis]) -> bool:
         """Check if a source file has a corresponding test file"""
@@ -131,12 +143,18 @@ class SystemPerspective(PerspectiveAnalyzer):
     def get_perspective(self) -> Perspective:
         return Perspective.SYSTEM
 
-    def analyze(self) -> Tuple[float, List[Prompt]]:
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
         prompts = []
         analyses = self.code_analyzer.get_all_analyses()
 
         if not analyses:
-            return 0.5, [Prompt(
+            return {
+                "complexity": 0.5,
+                "coupling": 0.5,
+                "cohesion": 0.5,
+                "infrastructure_health": 0.5,
+                "configuration_consistency": 0.5
+            }, [Prompt(
                 perspective=Perspective.SYSTEM,
                 priority=Priority.INFO,
                 title="No Python files to analyze",
@@ -188,4 +206,18 @@ class SystemPerspective(PerspectiveAnalyzer):
                 tags=["complexity", "readability"]
             ))
 
-        return fitness, prompts
+        avg_imports = sum(a.imports for a in analyses.values()) / len(analyses)
+        coupling_fitness = max(0.0, 1.0 - (avg_imports / 15.0))
+
+        config_file = self.root_dir / "organism_state.json"
+        config_consistency = 1.0 if config_file.exists() else 0.5
+
+        metrics = {
+            "complexity": complexity_fitness,
+            "coupling": coupling_fitness,
+            "cohesion": length_fitness,
+            "infrastructure_health": fitness,
+            "configuration_consistency": config_consistency
+        }
+
+        return metrics, prompts

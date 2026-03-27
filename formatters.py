@@ -48,11 +48,17 @@ class PromptFormatter:
         """Format the header for a perspective"""
         stage = state.get_stage()
 
+
+        overall_sys_fitness_str = ""
+        if state.fitness_scores:
+            overall_sys_fitness = sum(state.fitness_scores.values()) / len(state.fitness_scores)
+            overall_sys_fitness_str = f"  |  Overall System Fitness: {overall_sys_fitness:.2%}"
+
         lines = [
             "",
             "=" * 60,
             f"  PERSPECTIVE: {perspective.value.upper()}",
-            f"  Generation: {state.generation}  |  Stage: {stage.value}",
+            f"  Generation: {state.generation}  |  Stage: {stage.value}{overall_sys_fitness_str}",
             f"  Fitness: {fitness:.2%}",
             "=" * 60,
             ""
