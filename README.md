@@ -50,6 +50,15 @@ Selfdev now ships with four specialized [VS Code agents](https://github.com/evge
 
 🔗 **[system-design.trushin.vip](https://system-design.trushin.vip/)**
 
+### Wash My Car
+
+[![Wash My Car — Best day spotlight with score, weather breakdown, and recommended wash window](https://selfdev.trushin.vip/img/wash-my-car-1.webp)](https://wash-my-car.trushin.vip/)
+[![Wash My Car — 14-day projection stream with color-coded gauge cards](https://selfdev.trushin.vip/img/wash-my-car-2.webp)](https://wash-my-car.trushin.vip/)
+
+**100% Free & No Registration.** 14-day car wash calendar powered by weather analysis. Scores each day 0–100 based on rain, wind, UV, humidity & temperature. Best-time window recommendation, post-wash rain outlook, and auto-detect location — all privacy-first with data staying local.
+
+🔗 **[wash-my-car.trushin.vip](https://wash-my-car.trushin.vip/)**
+
 ### More Projects
 
 | Project | Description |
