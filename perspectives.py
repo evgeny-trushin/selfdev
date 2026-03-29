@@ -4,7 +4,7 @@ Includes the base class and code-quality perspectives (Test, System).
 """
 
 from pathlib import Path
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 from abc import ABC, abstractmethod
 
 from models import (
@@ -31,8 +31,8 @@ class PerspectiveAnalyzer(ABC):
         self.git_analyzer = GitAnalyzer(root_dir)
 
     @abstractmethod
-    def analyze(self) -> Tuple[float, List[Prompt]]:
-        """Analyze from this perspective. Returns (fitness_score, prompts)"""
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
+        """Analyze from this perspective. Returns (granular_metrics, prompts)"""
         pass
 
     @abstractmethod
@@ -47,7 +47,7 @@ class TestPerspective(PerspectiveAnalyzer):
     def get_perspective(self) -> Perspective:
         return Perspective.TEST
 
-    def analyze(self) -> Tuple[float, List[Prompt]]:
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
         prompts = []
         analyses = self.code_analyzer.get_all_analyses()
 
@@ -56,6 +56,13 @@ class TestPerspective(PerspectiveAnalyzer):
 
         # Look for test directories at root level AND inside sub-directories
         test_dir_found = len(test_files) > 0
+
+        metrics = {
+            "code_coverage": 0.0,
+            "mutation_score": 0.5,             # Default: nice-to-have later
+            "test_pass_rate": 1.0,             # Assume 1.0 initially unless tests fail
+            "data_integrity_validation": 0.5,  # Default: needs implementation
+        }
 
         if not test_dir_found:
             prompts.append(Prompt(
@@ -69,7 +76,7 @@ class TestPerspective(PerspectiveAnalyzer):
                     "Configure test runner"
                 ]
             ))
-            return 0.0, prompts
+            return metrics, prompts
 
         source_count = len(source_files)
         test_count = len(test_files)
@@ -80,6 +87,7 @@ class TestPerspective(PerspectiveAnalyzer):
             coverage_ratio = 1.0 if test_count > 0 else 0.5
 
         fitness = min(1.0, coverage_ratio)
+        metrics["code_coverage"] = fitness
 
         if coverage_ratio < 0.5:
             prompts.append(Prompt(
@@ -116,7 +124,7 @@ class TestPerspective(PerspectiveAnalyzer):
                 ]
             ))
 
-        return fitness, prompts
+        return metrics, prompts
 
     def _is_file_tested(self, source_analysis: FileAnalysis, test_files: List[FileAnalysis]) -> bool:
         """Check if a source file has a corresponding test file"""
@@ -131,17 +139,26 @@ class SystemPerspective(PerspectiveAnalyzer):
     def get_perspective(self) -> Perspective:
         return Perspective.SYSTEM
 
-    def analyze(self) -> Tuple[float, List[Prompt]]:
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
         prompts = []
         analyses = self.code_analyzer.get_all_analyses()
 
+        metrics = {
+            "complexity": 0.5,
+            "coupling": 0.5,                  # Default
+            "cohesion": 0.5,                  # Default
+            "infrastructure_health": 0.5,     # Default
+            "configuration_consistency": 0.5  # Default
+        }
+
         if not analyses:
-            return 0.5, [Prompt(
+            prompts.append(Prompt(
                 perspective=Perspective.SYSTEM,
                 priority=Priority.INFO,
                 title="No Python files to analyze",
                 description="No Python source files found in standard directories."
-            )]
+            ))
+            return metrics, prompts
 
         total_complexity = sum(a.complexity for a in analyses.values())
         avg_complexity = total_complexity / len(analyses)
@@ -152,7 +169,8 @@ class SystemPerspective(PerspectiveAnalyzer):
         long_file_ratio = len(long_files) / len(analyses)
         length_fitness = 1 - long_file_ratio
 
-        fitness = (complexity_fitness + length_fitness) / 2
+        metrics["complexity"] = complexity_fitness
+        metrics["cohesion"] = length_fitness
 
         for analysis in long_files:
             prompts.append(Prompt(
@@ -188,4 +206,4 @@ class SystemPerspective(PerspectiveAnalyzer):
                 tags=["complexity", "readability"]
             ))
 
-        return fitness, prompts
+        return metrics, prompts

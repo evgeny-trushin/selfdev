@@ -5,7 +5,7 @@ Analytics (trends/patterns) and Debug (issues/TODOs) perspectives.
 
 import re
 from pathlib import Path
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 from models import (
     OrganismState,
@@ -23,18 +23,26 @@ class AnalyticsPerspective(PerspectiveAnalyzer):
     def get_perspective(self) -> Perspective:
         return Perspective.ANALYTICS
 
-    def analyze(self) -> Tuple[float, List[Prompt]]:
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
         prompts = []
 
         history = self.state.fitness_history
 
+        metrics = {
+            "feature_adoption": 0.5,      # Default
+            "user_retention": 0.5,        # Default
+            "error_rate_trends": 0.5,     # Will update based on fitness trend
+            "usage_patterns": 0.5,        # Default
+        }
+
         if len(history) < 2:
-            return 0.5, [Prompt(
+            prompts.append(Prompt(
                 perspective=Perspective.ANALYTICS,
                 priority=Priority.INFO,
                 title="Insufficient history for trend analysis",
                 description="Run more generations to enable trend analysis."
-            )]
+            ))
+            return metrics, prompts
 
         older = history[:-5]
         recent = history[-5:]
@@ -90,7 +98,9 @@ class AnalyticsPerspective(PerspectiveAnalyzer):
             elif prompt.priority == Priority.MEDIUM:
                 fitness -= 0.15
         fitness = max(0.1, fitness)
-        return fitness, prompts
+
+        metrics["error_rate_trends"] = fitness
+        return metrics, prompts
 
 
 class DebugPerspective(PerspectiveAnalyzer):
@@ -99,9 +109,17 @@ class DebugPerspective(PerspectiveAnalyzer):
     def get_perspective(self) -> Perspective:
         return Perspective.DEBUG
 
-    def analyze(self) -> Tuple[float, List[Prompt]]:
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
         prompts = []
         analyses = self.code_analyzer.get_all_analyses()
+
+        metrics = {
+            "error_count": 1.0,           # Will update based on issue count
+            "broken_integrations": 1.0,   # Default 1.0 (good)
+            "stale_data": 1.0,            # Default 1.0
+            "deployment_failures": 1.0,   # Default 1.0
+            "infrastructure_drift": 1.0   # Default 1.0
+        }
 
         all_issues = []
         for analysis in analyses.values():
@@ -138,8 +156,9 @@ class DebugPerspective(PerspectiveAnalyzer):
         issue_count = len(all_issues) + len(todos)
         max_issues = 20
         fitness = max(0.1, 1 - (issue_count / max_issues))
+        metrics["error_count"] = fitness
 
-        return fitness, prompts
+        return metrics, prompts
 
     def _find_todo_comments(self) -> List[dict]:
         """Scan source directories for TODO/FIXME comments, skipping test files"""
