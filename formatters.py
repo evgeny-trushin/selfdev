@@ -20,11 +20,14 @@ class PromptFormatter:
         pass
 
     def format_prompt(self, prompt: Prompt) -> str:
-        """Format a single prompt"""
+        """Format a single prompt with actionable instructions and state context"""
         lines = []
 
         priority_str = prompt.priority.name
         lines.append(f"[{priority_str}] {prompt.title}")
+
+        if prompt.perspective_fitness is not None:
+            lines.append(f"  Perspective Fitness: {prompt.perspective_fitness:.2%}")
 
         lines.append(f"  {prompt.description}")
 
