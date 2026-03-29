@@ -204,6 +204,26 @@ class TestSelfDevelopmentOrganism(unittest.TestCase):
                     Perspective.ANALYTICS, Perspective.DEBUG}
         self.assertEqual(set(organism.perspectives.keys()), expected)
 
+    def test_run_perspective_stamps_fitness_on_prompts(self):
+        """run_perspective should set perspective_fitness on each prompt."""
+        organism = SelfDevelopmentOrganism(root_dir=Path(self.tmp_dir))
+        prompts = organism.run_perspective(Perspective.USER)
+        for p in prompts:
+            self.assertIsNotNone(p.perspective_fitness)
+            self.assertIsInstance(p.perspective_fitness, float)
+
+    def test_prompts_sorted_by_priority_then_fitness(self):
+        """Prompts should be sorted by priority value, then by fitness (ascending)."""
+        organism = SelfDevelopmentOrganism(root_dir=Path(self.tmp_dir))
+        prompts = organism.run_perspective(Perspective.USER)
+        if len(prompts) > 1:
+            for i in range(len(prompts) - 1):
+                a, b = prompts[i], prompts[i + 1]
+                self.assertLessEqual(
+                    (a.priority.value, a.perspective_fitness or 0.0),
+                    (b.priority.value, b.perspective_fitness or 0.0),
+                )
+
     def test_advance_blocked_when_tests_fail(self):
         """advance_generation must not advance when tests fail."""
         req_dir = Path(self.tmp_dir) / "requirements"

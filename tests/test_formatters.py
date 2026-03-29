@@ -270,5 +270,49 @@ class TestPromptFormatter(unittest.TestCase):
         self.assertIn("INFO: 1", output)
 
 
+    def test_format_prompt_includes_perspective_fitness(self):
+        """Prompt with perspective_fitness should display fitness context."""
+        formatter = PromptFormatter()
+        p = Prompt(
+            perspective=Perspective.USER,
+            priority=Priority.HIGH,
+            title="Improve docs",
+            description="Documentation is incomplete.",
+            perspective_fitness=0.35,
+            acceptance_criteria=["Add usage examples"],
+        )
+        output = formatter.format_prompt(p)
+        self.assertIn("Perspective Fitness: 35.00%", output)
+        self.assertIn("[HIGH]", output)
+        self.assertIn("Improve docs", output)
+        self.assertIn("Add usage examples", output)
+
+    def test_format_prompt_no_fitness_context(self):
+        """Prompt without perspective_fitness should not show fitness line."""
+        formatter = PromptFormatter()
+        p = Prompt(
+            perspective=Perspective.USER,
+            priority=Priority.MEDIUM,
+            title="Minor fix",
+            description="Small issue.",
+        )
+        output = formatter.format_prompt(p)
+        self.assertNotIn("Perspective Fitness", output)
+
+    def test_format_prompt_fitness_no_ansi(self):
+        """Fitness context line must be plain text."""
+        formatter = PromptFormatter()
+        p = Prompt(
+            perspective=Perspective.SYSTEM,
+            priority=Priority.CRITICAL,
+            title="Critical",
+            description="Urgent",
+            perspective_fitness=0.10,
+        )
+        output = formatter.format_prompt(p)
+        self.assertNotIn("\033[", output)
+        self.assertIn("10.00%", output)
+
+
 if __name__ == "__main__":
     unittest.main()
