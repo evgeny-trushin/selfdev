@@ -67,7 +67,8 @@ class TestPerspective(PerspectiveAnalyzer):
                     "Create tests/ directory",
                     "Add at least one test file",
                     "Configure test runner"
-                ]
+                ],
+                reason="No test files detected in the project"
             ))
             return 0.0, prompts
 
@@ -92,7 +93,8 @@ class TestPerspective(PerspectiveAnalyzer):
                 acceptance_criteria=[
                     f"Add tests for {max(1, source_count - test_count)} more modules",
                     "Achieve at least 50% file coverage"
-                ]
+                ],
+                reason=f"Test coverage ratio is {coverage_ratio:.0%}, below 50% threshold"
             ))
 
         untested_complex = [
@@ -113,7 +115,8 @@ class TestPerspective(PerspectiveAnalyzer):
                     "Create corresponding test file",
                     "Test main functions",
                     "Include edge cases"
-                ]
+                ],
+                reason=f"Complexity {analysis.complexity:.1f} exceeds threshold {COMPLEXITY_THRESHOLD} with no tests"
             ))
 
         return fitness, prompts
@@ -140,7 +143,12 @@ class SystemPerspective(PerspectiveAnalyzer):
                 perspective=Perspective.SYSTEM,
                 priority=Priority.INFO,
                 title="No Python files to analyze",
-                description="No Python source files found in standard directories."
+                description="No Python source files found in standard directories.",
+                acceptance_criteria=[
+                    "Add Python source files to standard directories (src/, lib/, etc.)",
+                    "Or specify a custom root with --root"
+                ],
+                reason="No analyzable Python files found in standard directories"
             )]
 
         total_complexity = sum(a.complexity for a in analyses.values())
@@ -168,7 +176,8 @@ class SystemPerspective(PerspectiveAnalyzer):
                     "Keep file under 300 lines",
                     "Maintain single responsibility"
                 ],
-                tags=["refactoring", "modularization"]
+                tags=["refactoring", "modularization"],
+                reason=f"File exceeds {MAX_FILE_LINES}-line limit by {analysis.lines - MAX_FILE_LINES} lines"
             ))
 
         for analysis in high_complexity:
@@ -185,7 +194,8 @@ class SystemPerspective(PerspectiveAnalyzer):
                     "Reduce nesting depth",
                     "Use early returns where appropriate"
                 ],
-                tags=["complexity", "readability"]
+                tags=["complexity", "readability"],
+                reason=f"Complexity {analysis.complexity:.1f} exceeds threshold {COMPLEXITY_THRESHOLD}"
             ))
 
         return fitness, prompts

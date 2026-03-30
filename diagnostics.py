@@ -33,7 +33,12 @@ class AnalyticsPerspective(PerspectiveAnalyzer):
                 perspective=Perspective.ANALYTICS,
                 priority=Priority.INFO,
                 title="Insufficient history for trend analysis",
-                description="Run more generations to enable trend analysis."
+                description="Run more generations to enable trend analysis.",
+                acceptance_criteria=[
+                    "Complete at least 2 generations to build fitness history",
+                    "Run ./develop.sh after each increment to record metrics"
+                ],
+                reason="Fitness history has fewer than 2 entries"
             )]
 
         older = history[:-5]
@@ -56,7 +61,8 @@ class AnalyticsPerspective(PerspectiveAnalyzer):
                         "Review recent changes",
                         "Identify regression sources",
                         "Prioritize stability over features"
-                    ]
+                    ],
+                    reason=f"Fitness trend is {trend:+.2f}, below -0.1 threshold"
                 ))
             elif trend > 0.1:
                 prompts.append(Prompt(
@@ -64,7 +70,12 @@ class AnalyticsPerspective(PerspectiveAnalyzer):
                     priority=Priority.INFO,
                     title="Positive fitness trend",
                     description=f"Fitness improved by {trend:.2f}. Keep current trajectory.",
-                    tags=["positive", "trend"]
+                    acceptance_criteria=[
+                        "Continue current development approach",
+                        "Monitor for sustained improvement"
+                    ],
+                    tags=["positive", "trend"],
+                    reason=f"Fitness trend is {trend:+.2f}, above +0.1 threshold"
                 ))
 
         commits = self.git_analyzer.get_recent_commits()
@@ -80,7 +91,8 @@ class AnalyticsPerspective(PerspectiveAnalyzer):
                         "Improve test coverage",
                         "Add pre-commit hooks",
                         "Review development process"
-                    ]
+                    ],
+                    reason=f"Bug-fix ratio {fix_commits}/{len(commits)} exceeds 50% threshold"
                 ))
 
         fitness = 1.0
@@ -116,7 +128,8 @@ class DebugPerspective(PerspectiveAnalyzer):
                 description=issue_text,
                 file_path=file_path,
                 acceptance_criteria=["Resolve the reported code quality issue"],
-                tags=["code-quality"]
+                tags=["code-quality"],
+                reason=f"Static analysis detected issue in {file_path}"
             ))
 
         todos = self._find_todo_comments()
@@ -132,7 +145,8 @@ class DebugPerspective(PerspectiveAnalyzer):
                 acceptance_criteria=[
                     "Review and commit changes",
                     "Or stash if work in progress"
-                ]
+                ],
+                reason=f"{len(uncommitted)} modified files not yet committed"
             ))
 
         issue_count = len(all_issues) + len(todos)
@@ -185,5 +199,6 @@ class DebugPerspective(PerspectiveAnalyzer):
                     f"Address the {todo['type']} comment",
                     "Remove or update the comment after resolution"
                 ],
-                tags=[todo["type"].lower()]
+                tags=[todo["type"].lower()],
+                reason=f"{todo['type']} comment found at {todo['file']}:{todo['line']}"
             ))

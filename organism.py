@@ -93,7 +93,7 @@ class SelfDevelopmentOrganism:
                 highest = prompts[0].priority
                 filtered = [p for p in prompts if p.priority == highest]
                 for prompt in filtered:
-                    print(self.formatter.format_prompt(prompt))
+                    print(self.formatter.format_prompt(prompt, fitness=fitness))
                     print()
             else:
                 print("  No issues found from this perspective.")
@@ -122,9 +122,12 @@ class SelfDevelopmentOrganism:
         else:
             global_highest = None
 
-        # Phase 2 — print, filtering each perspective to global highest
+        # Phase 2 — print perspectives ordered by fitness (lowest first, principle G3)
+        perspectives_by_fitness = sorted(
+            Perspective, key=lambda p: per_perspective[p][0]
+        )
         displayed_prompts: List[Prompt] = []
-        for perspective in Perspective:
+        for perspective in perspectives_by_fitness:
             fitness, prompts = per_perspective[perspective]
             print(self.formatter.format_header(perspective, fitness, self.state))
             if global_highest is not None:
@@ -133,7 +136,7 @@ class SelfDevelopmentOrganism:
                 filtered = []
             if filtered:
                 for prompt in filtered:
-                    print(self.formatter.format_prompt(prompt))
+                    print(self.formatter.format_prompt(prompt, fitness=fitness))
                     print()
                 displayed_prompts.extend(filtered)
             else:

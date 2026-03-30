@@ -47,7 +47,8 @@ class UserPerspective(PerspectiveAnalyzer):
                     "Create README.md in project root",
                     "Include project description",
                     "Add basic usage instructions"
-                ]
+                ],
+                reason="README.md is missing from project root"
             ))
             return
 
@@ -67,7 +68,8 @@ class UserPerspective(PerspectiveAnalyzer):
                     "Include installation instructions",
                     "Add at least 2 usage examples",
                     "Document main features"
-                ]
+                ],
+                reason=f"README.md is only {len(content)} chars, below 500-char minimum"
             ))
 
     def _check_package_json(self, fitness_components, prompts):
@@ -89,6 +91,7 @@ class UserPerspective(PerspectiveAnalyzer):
                 title="Add package description",
                 description="package.json lacks description field.",
                 file_path="package.json",
-                acceptance_criteria=["Add meaningful description to package.json"]
+                acceptance_criteria=["Add meaningful description to package.json"],
+                reason="package.json description field is empty or missing"
             ))
 

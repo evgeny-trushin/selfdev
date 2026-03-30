@@ -19,12 +19,18 @@ class PromptFormatter:
     def __init__(self):
         pass
 
-    def format_prompt(self, prompt: Prompt) -> str:
-        """Format a single prompt"""
+    def format_prompt(self, prompt: Prompt, fitness: float = None) -> str:
+        """Format a single prompt with state context and actionable details"""
         lines = []
 
         priority_str = prompt.priority.name
         lines.append(f"[{priority_str}] {prompt.title}")
+
+        # State context: perspective and fitness (principle G1)
+        context_parts = [f"Perspective: {prompt.perspective.value}"]
+        if fitness is not None:
+            context_parts.append(f"Fitness: {fitness:.0%}")
+        lines.append(f"  ({', '.join(context_parts)})")
 
         lines.append(f"  {prompt.description}")
 
@@ -36,6 +42,10 @@ class PromptFormatter:
 
         if prompt.metric_current is not None and prompt.metric_target is not None:
             lines.append(f"  Current: {prompt.metric_current:.1f} -> Target: {prompt.metric_target:.1f}")
+
+        # Transparency: why this prompt was generated (principle M3)
+        if prompt.reason:
+            lines.append(f"  Reason: {prompt.reason}")
 
         if prompt.acceptance_criteria:
             lines.append("  Acceptance Criteria:")

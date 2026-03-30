@@ -70,6 +70,7 @@ class Prompt:
     metric_target: Optional[float] = None
     acceptance_criteria: List[str] = field(default_factory=list)
     tags: List[str] = field(default_factory=list)
+    reason: str = ""
 
 
 @dataclass
