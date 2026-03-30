@@ -81,8 +81,9 @@ class SelfDevelopmentOrganism:
         responsible for global filtering and printing.
         """
         analyzer = self.perspectives[perspective]
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
 
+        fitness = sum(metrics.values()) / len(metrics) if metrics else 0.0
         self.state.fitness_scores[perspective.value] = fitness
 
         prompts = sorted(prompts, key=lambda p: p.priority.value)
