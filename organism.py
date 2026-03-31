@@ -19,7 +19,7 @@ Workflow (increment-driven loop):
 import argparse
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List
+from typing import Dict, List, Tuple
 
 # Re-export all public symbols for backward compatibility
 from models import (  # noqa: F401
@@ -108,7 +108,7 @@ class SelfDevelopmentOrganism:
         highest priority across *all* of them, and displays only prompts
         at that level.
         """
-        per_perspective: dict[Perspective, tuple[float, list[Prompt]]] = {}
+        per_perspective: Dict[Perspective, Tuple[float, List[Prompt]]] = {}
 
         # Phase 1 — collect without printing
         for perspective in Perspective:
