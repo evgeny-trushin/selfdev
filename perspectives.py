@@ -4,7 +4,7 @@ Includes the base class and code-quality perspectives (Test, System).
 """
 
 from pathlib import Path
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 from abc import ABC, abstractmethod
 
 from models import (
@@ -31,8 +31,8 @@ class PerspectiveAnalyzer(ABC):
         self.git_analyzer = GitAnalyzer(root_dir)
 
     @abstractmethod
-    def analyze(self) -> Tuple[float, List[Prompt]]:
-        """Analyze from this perspective. Returns (fitness_score, prompts)"""
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
+        """Analyze from this perspective. Returns (fitness_metrics, prompts)"""
         pass
 
     @abstractmethod
@@ -47,7 +47,7 @@ class TestPerspective(PerspectiveAnalyzer):
     def get_perspective(self) -> Perspective:
         return Perspective.TEST
 
-    def analyze(self) -> Tuple[float, List[Prompt]]:
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
         prompts = []
         analyses = self.code_analyzer.get_all_analyses()
 
@@ -70,7 +70,12 @@ class TestPerspective(PerspectiveAnalyzer):
                 ],
                 reason="No test files detected in the project"
             ))
-            return 0.0, prompts
+            return {
+                "code_coverage": 0.0,
+                "mutation_score": 0.0,
+                "test_pass_rate": 0.0,
+                "data_integrity_validation": 0.0
+            }, prompts
 
         source_count = len(source_files)
         test_count = len(test_files)
@@ -80,7 +85,7 @@ class TestPerspective(PerspectiveAnalyzer):
         else:
             coverage_ratio = 1.0 if test_count > 0 else 0.5
 
-        fitness = min(1.0, coverage_ratio)
+        coverage_ratio = min(1.0, coverage_ratio)
 
         if coverage_ratio < 0.5:
             prompts.append(Prompt(
@@ -119,7 +124,12 @@ class TestPerspective(PerspectiveAnalyzer):
                 reason=f"Complexity {analysis.complexity:.1f} exceeds threshold {COMPLEXITY_THRESHOLD} with no tests"
             ))
 
-        return fitness, prompts
+        return {
+            "code_coverage": coverage_ratio,
+            "mutation_score": 1.0,
+            "test_pass_rate": 1.0,
+            "data_integrity_validation": 1.0
+        }, prompts
 
     def _is_file_tested(self, source_analysis: FileAnalysis, test_files: List[FileAnalysis]) -> bool:
         """Check if a source file has a corresponding test file"""
@@ -134,12 +144,18 @@ class SystemPerspective(PerspectiveAnalyzer):
     def get_perspective(self) -> Perspective:
         return Perspective.SYSTEM
 
-    def analyze(self) -> Tuple[float, List[Prompt]]:
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
         prompts = []
         analyses = self.code_analyzer.get_all_analyses()
 
         if not analyses:
-            return 0.5, [Prompt(
+            return {
+                "complexity": 0.5,
+                "coupling": 0.5,
+                "cohesion": 0.5,
+                "infrastructure_health": 0.5,
+                "configuration_consistency": 0.5
+            }, [Prompt(
                 perspective=Perspective.SYSTEM,
                 priority=Priority.INFO,
                 title="No Python files to analyze",
@@ -198,4 +214,10 @@ class SystemPerspective(PerspectiveAnalyzer):
                 reason=f"Complexity {analysis.complexity:.1f} exceeds threshold {COMPLEXITY_THRESHOLD}"
             ))
 
-        return fitness, prompts
+        return {
+            "complexity": fitness,
+            "coupling": 1.0,
+            "cohesion": 1.0,
+            "infrastructure_health": 1.0,
+            "configuration_consistency": 1.0
+        }, prompts

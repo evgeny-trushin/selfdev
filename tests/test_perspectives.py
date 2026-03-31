@@ -37,7 +37,7 @@ class TestUserPerspective(unittest.TestCase):
 
     def test_no_readme_critical_prompt(self):
         analyzer = UserPerspective(Path(self.tmp_dir), self.state)
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
         critical = [p for p in prompts if p.priority == Priority.CRITICAL]
         self.assertGreater(len(critical), 0)
         self.assertIn("README", critical[0].title)
@@ -45,15 +45,15 @@ class TestUserPerspective(unittest.TestCase):
     def test_with_readme(self):
         (Path(self.tmp_dir) / "README.md").write_text("# Project\n" + "x" * 5000)
         analyzer = UserPerspective(Path(self.tmp_dir), self.state)
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
         critical = [p for p in prompts if p.priority == Priority.CRITICAL]
         self.assertEqual(len(critical), 0)
-        self.assertGreater(fitness, 0.5)
+        self.assertGreater(metrics["documentation_quality"], 0.5)
 
     def test_short_readme_high_prompt(self):
         (Path(self.tmp_dir) / "README.md").write_text("# Hi")
         analyzer = UserPerspective(Path(self.tmp_dir), self.state)
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
         high = [p for p in prompts if p.priority == Priority.HIGH]
         self.assertGreater(len(high), 0)
 
@@ -63,8 +63,8 @@ class TestUserPerspective(unittest.TestCase):
             json.dumps({"name": "test", "description": "A test project"})
         )
         analyzer = UserPerspective(Path(self.tmp_dir), self.state)
-        fitness, prompts = analyzer.analyze()
-        self.assertGreater(fitness, 0.5)
+        metrics, prompts = analyzer.analyze()
+        self.assertGreater(metrics["usability"], 0.5)
 
     def test_package_json_without_description(self):
         (Path(self.tmp_dir) / "README.md").write_text("# Project\n" + "x" * 5000)
@@ -72,7 +72,7 @@ class TestUserPerspective(unittest.TestCase):
             json.dumps({"name": "test"})
         )
         analyzer = UserPerspective(Path(self.tmp_dir), self.state)
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
         medium = [p for p in prompts if p.priority == Priority.MEDIUM]
         self.assertGreater(len(medium), 0)
 
@@ -92,8 +92,9 @@ class TestUserPerspective(unittest.TestCase):
         """User perspective should work fine without requirements.md."""
         (Path(self.tmp_dir) / "README.md").write_text("# Project\n" + "x" * 5000)
         analyzer = UserPerspective(Path(self.tmp_dir), self.state)
-        fitness, prompts = analyzer.analyze()
-        self.assertIsInstance(fitness, float)
+        metrics, prompts = analyzer.analyze()
+        self.assertIsInstance(metrics, dict)
+        self.assertIn("documentation_quality", metrics)
         self.assertIsInstance(prompts, list)
 
 
@@ -108,8 +109,8 @@ class TestTestPerspective(unittest.TestCase):
 
     def test_no_test_dir_critical(self):
         analyzer = TestPerspective(Path(self.tmp_dir), self.state)
-        fitness, prompts = analyzer.analyze()
-        self.assertEqual(fitness, 0.0)
+        metrics, prompts = analyzer.analyze()
+        self.assertEqual(metrics["code_coverage"], 0.0)
         critical = [p for p in prompts if p.priority == Priority.CRITICAL]
         self.assertGreater(len(critical), 0)
 
@@ -121,7 +122,7 @@ class TestTestPerspective(unittest.TestCase):
         tests_dir.mkdir()
         (tests_dir / "test_core.py").write_text("def test_core(): pass")
         analyzer = TestPerspective(Path(self.tmp_dir), self.state)
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
         critical = [p for p in prompts if p.priority == Priority.CRITICAL
                     and "test directory" in p.title.lower()]
         self.assertEqual(len(critical), 0, "Should NOT ask to create test dir when nested tests/ exists")
@@ -130,8 +131,8 @@ class TestTestPerspective(unittest.TestCase):
         (Path(self.tmp_dir) / "tests").mkdir()
         (Path(self.tmp_dir) / "tests" / "test_a.py").write_text("def test_a(): pass")
         analyzer = TestPerspective(Path(self.tmp_dir), self.state)
-        fitness, prompts = analyzer.analyze()
-        self.assertGreater(fitness, 0.0)
+        metrics, prompts = analyzer.analyze()
+        self.assertGreater(metrics["code_coverage"], 0.0)
 
     def test_with_source_and_test_files(self):
         src = Path(self.tmp_dir) / "src"
@@ -141,8 +142,8 @@ class TestTestPerspective(unittest.TestCase):
         tests.mkdir()
         (tests / "test_module.py").write_text("def test_func(): pass")
         analyzer = TestPerspective(Path(self.tmp_dir), self.state)
-        fitness, prompts = analyzer.analyze()
-        self.assertGreater(fitness, 0.0)
+        metrics, prompts = analyzer.analyze()
+        self.assertGreater(metrics["code_coverage"], 0.0)
 
     def test_low_coverage_prompt(self):
         src = Path(self.tmp_dir) / "src"
@@ -153,7 +154,7 @@ class TestTestPerspective(unittest.TestCase):
         tests.mkdir()
         (tests / "test_one.py").write_text("def test_one(): pass")
         analyzer = TestPerspective(Path(self.tmp_dir), self.state)
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
         high = [p for p in prompts if p.priority == Priority.HIGH]
         self.assertGreater(len(high), 0)
 
@@ -169,8 +170,8 @@ class TestSystemPerspective(unittest.TestCase):
 
     def test_no_files_info_prompt(self):
         analyzer = SystemPerspective(Path(self.tmp_dir), self.state)
-        fitness, prompts = analyzer.analyze()
-        self.assertEqual(fitness, 0.5)
+        metrics, prompts = analyzer.analyze()
+        self.assertEqual(metrics["complexity"], 0.5)
         self.assertEqual(len(prompts), 1)
         self.assertEqual(prompts[0].priority, Priority.INFO)
 
@@ -179,15 +180,15 @@ class TestSystemPerspective(unittest.TestCase):
         src.mkdir()
         (src / "module.py").write_text("def func(): pass")
         analyzer = SystemPerspective(Path(self.tmp_dir), self.state)
-        fitness, prompts = analyzer.analyze()
-        self.assertGreater(fitness, 0.0)
+        metrics, prompts = analyzer.analyze()
+        self.assertGreater(metrics["complexity"], 0.0)
 
     def test_long_file_refactor_prompt(self):
         src = Path(self.tmp_dir) / "src"
         src.mkdir()
         (src / "big.py").write_text("\n".join(["x = 1"] * 400))
         analyzer = SystemPerspective(Path(self.tmp_dir), self.state)
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
         refactor = [p for p in prompts if "Refactor" in p.title]
         self.assertGreater(len(refactor), 0)
 
@@ -200,7 +201,7 @@ class TestSystemPerspective(unittest.TestCase):
             lines.append(f"        return {i}")
         (src / "complex.py").write_text("\n".join(lines))
         analyzer = SystemPerspective(Path(self.tmp_dir), self.state)
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
         complexity_prompts = [p for p in prompts if "complexity" in p.title.lower()]
         self.assertGreater(len(complexity_prompts), 0)
 
@@ -217,8 +218,8 @@ class TestAnalyticsPerspective(unittest.TestCase):
         state = OrganismState()
         analyzer = AnalyticsPerspective(Path(self.tmp_dir), state)
         analyzer.git_analyzer = _mock_git_analyzer()
-        fitness, prompts = analyzer.analyze()
-        self.assertEqual(fitness, 0.5)
+        metrics, prompts = analyzer.analyze()
+        self.assertEqual(metrics["error_rate_trends"], 0.5)
         self.assertEqual(prompts[0].priority, Priority.INFO)
 
     def test_with_history_declining_trend(self):
@@ -230,7 +231,7 @@ class TestAnalyticsPerspective(unittest.TestCase):
         ]
         analyzer = AnalyticsPerspective(Path(self.tmp_dir), state)
         analyzer.git_analyzer = _mock_git_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
         declining = [p for p in prompts if "declining" in p.title.lower()]
         self.assertGreater(len(declining), 0)
 
@@ -243,7 +244,7 @@ class TestAnalyticsPerspective(unittest.TestCase):
         ]
         analyzer = AnalyticsPerspective(Path(self.tmp_dir), state)
         analyzer.git_analyzer = _mock_git_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
         positive = [p for p in prompts if "positive" in p.title.lower() or "Positive" in p.title]
         self.assertGreater(len(positive), 0)
 
@@ -262,7 +263,7 @@ class TestAnalyticsPerspective(unittest.TestCase):
         ]
         analyzer = AnalyticsPerspective(Path(self.tmp_dir), state)
         analyzer.git_analyzer = mock_git
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
         fix_rate = [p for p in prompts if "fix rate" in p.title.lower() or "bug fix" in p.title.lower()]
         self.assertGreater(len(fix_rate), 0)
 
@@ -279,15 +280,15 @@ class TestDebugPerspective(unittest.TestCase):
     def test_clean_debug(self):
         analyzer = DebugPerspective(Path(self.tmp_dir), self.state)
         analyzer.git_analyzer = _mock_git_analyzer()
-        fitness, prompts = analyzer.analyze()
-        self.assertGreater(fitness, 0.5)
+        metrics, prompts = analyzer.analyze()
+        self.assertGreater(metrics["error_count"], 0.5)
 
     def test_uncommitted_changes(self):
         mock_git = _mock_git_analyzer()
         mock_git.get_uncommitted_changes.return_value = [" M file.py", "?? new.py"]
         analyzer = DebugPerspective(Path(self.tmp_dir), self.state)
         analyzer.git_analyzer = mock_git
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
         uncommitted = [p for p in prompts if "uncommitted" in p.title.lower() or "Uncommitted" in p.title]
         self.assertGreater(len(uncommitted), 0)
 
@@ -297,7 +298,7 @@ class TestDebugPerspective(unittest.TestCase):
         (src / "module.py").write_text("# TODO: Fix this\ndef func(): pass\n# FIXME: broken")
         analyzer = DebugPerspective(Path(self.tmp_dir), self.state)
         analyzer.git_analyzer = _mock_git_analyzer()
-        fitness, prompts = analyzer.analyze()
+        metrics, prompts = analyzer.analyze()
         todo_prompts = [p for p in prompts if any(t in p.tags for t in ["todo", "fixme"])]
         self.assertGreater(len(todo_prompts), 0)
 
@@ -308,8 +309,8 @@ class TestDebugPerspective(unittest.TestCase):
         (src / "module.py").write_text(todos)
         analyzer = DebugPerspective(Path(self.tmp_dir), self.state)
         analyzer.git_analyzer = _mock_git_analyzer()
-        fitness, prompts = analyzer.analyze()
-        self.assertLess(fitness, 0.5)
+        metrics, prompts = analyzer.analyze()
+        self.assertLess(metrics["error_count"], 0.5)
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ Analytics (trends/patterns) and Debug (issues/TODOs) perspectives.
 
 import re
 from pathlib import Path
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 from models import (
     OrganismState,
@@ -23,13 +23,18 @@ class AnalyticsPerspective(PerspectiveAnalyzer):
     def get_perspective(self) -> Perspective:
         return Perspective.ANALYTICS
 
-    def analyze(self) -> Tuple[float, List[Prompt]]:
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
         prompts = []
 
         history = self.state.fitness_history
 
         if len(history) < 2:
-            return 0.5, [Prompt(
+            return {
+                "feature_adoption": 0.5,
+                "user_retention": 0.5,
+                "error_rate_trends": 0.5,
+                "usage_patterns": 0.5
+            }, [Prompt(
                 perspective=Perspective.ANALYTICS,
                 priority=Priority.INFO,
                 title="Insufficient history for trend analysis",
@@ -102,7 +107,12 @@ class AnalyticsPerspective(PerspectiveAnalyzer):
             elif prompt.priority == Priority.MEDIUM:
                 fitness -= 0.15
         fitness = max(0.1, fitness)
-        return fitness, prompts
+        return {
+            "feature_adoption": 1.0,
+            "user_retention": 1.0,
+            "error_rate_trends": fitness,
+            "usage_patterns": 1.0
+        }, prompts
 
 
 class DebugPerspective(PerspectiveAnalyzer):
@@ -111,7 +121,7 @@ class DebugPerspective(PerspectiveAnalyzer):
     def get_perspective(self) -> Perspective:
         return Perspective.DEBUG
 
-    def analyze(self) -> Tuple[float, List[Prompt]]:
+    def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
         prompts = []
         analyses = self.code_analyzer.get_all_analyses()
 
@@ -153,7 +163,13 @@ class DebugPerspective(PerspectiveAnalyzer):
         max_issues = 20
         fitness = max(0.1, 1 - (issue_count / max_issues))
 
-        return fitness, prompts
+        return {
+            "error_count": fitness,
+            "broken_integrations": 1.0,
+            "stale_data": 1.0,
+            "deployment_failures": 1.0,
+            "infrastructure_drift": 1.0
+        }, prompts
 
     def _find_todo_comments(self) -> List[dict]:
         """Scan source directories for TODO/FIXME comments, skipping test files"""
