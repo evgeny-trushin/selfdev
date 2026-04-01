@@ -55,19 +55,36 @@ class SelfDevelopmentOrganism:
     """Main class orchestrating the self-development system"""
 
     def __init__(self, root_dir: Path = ROOT_DIR):
+        from models import load_config
+
         self.root_dir = root_dir
         self.state_file = root_dir / "organism_state.json"
         self.state = OrganismState.load(self.state_file)
-        self.formatter = PromptFormatter()
+        self.config = load_config(root_dir)
+        self.formatter = PromptFormatter(
+            templates=self.config.get("prompt_templates", {}))
 
         self.perspectives = {
-            Perspective.USER: UserPerspective(root_dir, self.state),
-            Perspective.TEST: TestPerspective(root_dir, self.state),
-            Perspective.SYSTEM: SystemPerspective(root_dir, self.state),
-            Perspective.ANALYTICS: AnalyticsPerspective(root_dir, self.state),
-            Perspective.DEBUG: DebugPerspective(root_dir, self.state),
-
+            Perspective.USER: UserPerspective(root_dir, self.state,
+                                              config=self.config),
+            Perspective.TEST: TestPerspective(root_dir, self.state,
+                                              config=self.config),
+            Perspective.SYSTEM: SystemPerspective(root_dir, self.state,
+                                                  config=self.config),
+            Perspective.ANALYTICS: AnalyticsPerspective(root_dir, self.state,
+                                                        config=self.config),
+            Perspective.DEBUG: DebugPerspective(root_dir, self.state,
+                                                config=self.config),
         }
+
+    def register_perspective(self, perspective: Perspective,
+                             analyzer: "PerspectiveAnalyzer") -> None:
+        """Register (or replace) a perspective analyzer."""
+        self.perspectives[perspective] = analyzer
+
+    def unregister_perspective(self, perspective: Perspective) -> None:
+        """Remove a perspective analyzer."""
+        self.perspectives.pop(perspective, None)
 
     def run_perspective(self, perspective: Perspective, print_results: bool = True) -> List[Prompt]:
         """Run analysis from a specific perspective.
@@ -83,7 +100,7 @@ class SelfDevelopmentOrganism:
         analyzer = self.perspectives[perspective]
         metrics, prompts = analyzer.analyze()
 
-        fitness = sum(metrics.values()) / len(metrics) if metrics else 0.0
+        fitness = analyzer.compute_fitness(metrics, prompts)
         self.state.fitness_scores[perspective.value] = fitness
 
         prompts = sorted(prompts, key=lambda p: p.priority.value)

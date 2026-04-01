@@ -204,6 +204,42 @@ class TestSelfDevelopmentOrganism(unittest.TestCase):
                     Perspective.ANALYTICS, Perspective.DEBUG}
         self.assertEqual(set(organism.perspectives.keys()), expected)
 
+    def test_register_perspective_replaces(self):
+        """register_perspective should swap in a new analyzer."""
+        organism = SelfDevelopmentOrganism(root_dir=Path(self.tmp_dir))
+        mock_analyzer = MagicMock()
+        mock_analyzer.analyze.return_value = ({}, [])
+        mock_analyzer.compute_fitness.return_value = 0.99
+        organism.register_perspective(Perspective.USER, mock_analyzer)
+        self.assertIs(organism.perspectives[Perspective.USER], mock_analyzer)
+
+    def test_unregister_perspective(self):
+        """unregister_perspective should remove a perspective."""
+        organism = SelfDevelopmentOrganism(root_dir=Path(self.tmp_dir))
+        organism.unregister_perspective(Perspective.DEBUG)
+        self.assertNotIn(Perspective.DEBUG, organism.perspectives)
+
+    def test_custom_fitness_fn(self):
+        """A custom fitness_fn passed to a perspective should be used."""
+        from perspectives import TestPerspective
+        custom_fn = lambda metrics, prompts: 0.42
+        analyzer = TestPerspective(
+            Path(self.tmp_dir), OrganismState(), fitness_fn=custom_fn)
+        metrics = {"code_coverage": 1.0, "test_pass_rate": 1.0}
+        self.assertAlmostEqual(analyzer.compute_fitness(metrics, []), 0.42)
+
+    def test_config_loaded_from_file(self):
+        """Organism should load thresholds from selfdev_config.json."""
+        import json
+        config_path = Path(self.tmp_dir) / "selfdev_config.json"
+        config_path.write_text(json.dumps({
+            "complexity_threshold": 20,
+            "max_file_lines": 500,
+        }))
+        organism = SelfDevelopmentOrganism(root_dir=Path(self.tmp_dir))
+        self.assertEqual(organism.config["complexity_threshold"], 20)
+        self.assertEqual(organism.config["max_file_lines"], 500)
+
     def test_advance_blocked_when_tests_fail(self):
         """advance_generation must not advance when tests fail."""
         req_dir = Path(self.tmp_dir) / "requirements"

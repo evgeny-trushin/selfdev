@@ -22,11 +22,35 @@ PRINCIPLES_DIR = ROOT_DIR / "principles"
 ANALYZABLE_DIRS = ["src", "components", "pages", "lib", "utils", "services"]
 TEST_DIRS = ["tests", "__tests__", "test", "spec"]
 
-# Thresholds
+# Default thresholds (overridable via selfdev_config.json)
 COMPLEXITY_THRESHOLD = 10  # McCabe complexity
 COVERAGE_TARGET = 80  # Percentage
 MAX_FILE_LINES = 300
 MAX_FUNCTION_LINES = 50
+
+
+def load_config(root_dir: Path = None) -> dict:
+    """Load configuration from selfdev_config.json, falling back to defaults."""
+    defaults = {
+        "complexity_threshold": COMPLEXITY_THRESHOLD,
+        "coverage_target": COVERAGE_TARGET,
+        "max_file_lines": MAX_FILE_LINES,
+        "max_function_lines": MAX_FUNCTION_LINES,
+        "analyzable_dirs": ANALYZABLE_DIRS,
+        "test_dirs": TEST_DIRS,
+        "prompt_templates": {},
+    }
+    if root_dir is None:
+        root_dir = SELFDEV_DIR
+    config_path = root_dir / "selfdev_config.json"
+    if config_path.exists():
+        try:
+            with open(config_path, "r") as f:
+                user_config = json.load(f)
+            defaults.update(user_config)
+        except (json.JSONDecodeError, TypeError):
+            pass
+    return defaults
 
 
 # ==================== Enums ====================

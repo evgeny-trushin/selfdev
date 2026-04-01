@@ -17,18 +17,40 @@ from models import (
     MAX_FILE_LINES,
     TEST_DIRS,
     FileAnalysis,
+    load_config,
 )
 from analyzers import CodeAnalyzer, GitAnalyzer
 
 
 class PerspectiveAnalyzer(ABC):
-    """Base class for perspective analyzers"""
+    """Base class for perspective analyzers.
 
-    def __init__(self, root_dir: Path, state: OrganismState):
+    Supports pluggable fitness via *fitness_fn*: pass a callable
+    ``(metrics: Dict[str, float], prompts: List[Prompt]) -> float``
+    to override the default averaging behaviour.
+    """
+
+    def __init__(self, root_dir: Path, state: OrganismState,
+                 fitness_fn=None, config: dict = None):
         self.root_dir = root_dir
         self.state = state
+        self.config = config if config is not None else load_config(root_dir)
         self.code_analyzer = CodeAnalyzer(root_dir)
         self.git_analyzer = GitAnalyzer(root_dir)
+        self._fitness_fn = fitness_fn
+
+    def compute_fitness(self, metrics: Dict[str, float],
+                        prompts: List["Prompt"]) -> float:
+        """Compute a scalar fitness score from *metrics* and *prompts*.
+
+        If a custom *fitness_fn* was provided at construction time, delegate
+        to it; otherwise return the mean of all metric values.
+        """
+        if self._fitness_fn is not None:
+            return self._fitness_fn(metrics, prompts)
+        if not metrics:
+            return 0.0
+        return sum(metrics.values()) / len(metrics)
 
     @abstractmethod
     def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
@@ -50,6 +72,9 @@ class TestPerspective(PerspectiveAnalyzer):
     def analyze(self) -> Tuple[Dict[str, float], List[Prompt]]:
         prompts = []
         analyses = self.code_analyzer.get_all_analyses()
+
+        coverage_target = self.config.get("coverage_target", COVERAGE_TARGET)
+        complexity_threshold = self.config.get("complexity_threshold", COMPLEXITY_THRESHOLD)
 
         source_files = [a for a in analyses.values() if not a.has_tests]
         test_files = [a for a in analyses.values() if a.has_tests]
@@ -94,7 +119,7 @@ class TestPerspective(PerspectiveAnalyzer):
                 title="Increase test coverage",
                 description=f"Only {test_count} test files for {source_count} source files.",
                 metric_current=coverage_ratio * 100,
-                metric_target=COVERAGE_TARGET,
+                metric_target=coverage_target,
                 acceptance_criteria=[
                     f"Add tests for {max(1, source_count - test_count)} more modules",
                     "Achieve at least 50% file coverage"
@@ -105,7 +130,7 @@ class TestPerspective(PerspectiveAnalyzer):
         untested_complex = [
             a for a in source_files
             if not self._is_file_tested(a, test_files)
-            and a.complexity > COMPLEXITY_THRESHOLD
+            and a.complexity > complexity_threshold
         ]
         for analysis in untested_complex:
             prompts.append(Prompt(
@@ -115,13 +140,13 @@ class TestPerspective(PerspectiveAnalyzer):
                 description=f"Complex file (complexity={analysis.complexity:.1f}) lacks tests.",
                 file_path=analysis.path,
                 metric_current=analysis.complexity,
-                metric_target=COMPLEXITY_THRESHOLD,
+                metric_target=complexity_threshold,
                 acceptance_criteria=[
                     "Create corresponding test file",
                     "Test main functions",
                     "Include edge cases"
                 ],
-                reason=f"Complexity {analysis.complexity:.1f} exceeds threshold {COMPLEXITY_THRESHOLD} with no tests"
+                reason=f"Complexity {analysis.complexity:.1f} exceeds threshold {complexity_threshold} with no tests"
             ))
 
         return {
@@ -148,6 +173,9 @@ class SystemPerspective(PerspectiveAnalyzer):
         prompts = []
         analyses = self.code_analyzer.get_all_analyses()
 
+        complexity_threshold = self.config.get("complexity_threshold", COMPLEXITY_THRESHOLD)
+        max_file_lines = self.config.get("max_file_lines", MAX_FILE_LINES)
+
         if not analyses:
             return {
                 "complexity": 0.5,
@@ -169,10 +197,10 @@ class SystemPerspective(PerspectiveAnalyzer):
 
         total_complexity = sum(a.complexity for a in analyses.values())
         avg_complexity = total_complexity / len(analyses)
-        long_files = [a for a in analyses.values() if a.lines > MAX_FILE_LINES]
-        high_complexity = [a for a in analyses.values() if a.complexity > COMPLEXITY_THRESHOLD]
+        long_files = [a for a in analyses.values() if a.lines > max_file_lines]
+        high_complexity = [a for a in analyses.values() if a.complexity > complexity_threshold]
 
-        complexity_fitness = max(0, 1 - (avg_complexity / (COMPLEXITY_THRESHOLD * 2)))
+        complexity_fitness = max(0, 1 - (avg_complexity / (complexity_threshold * 2)))
         long_file_ratio = len(long_files) / len(analyses)
         length_fitness = 1 - long_file_ratio
 
@@ -183,17 +211,17 @@ class SystemPerspective(PerspectiveAnalyzer):
                 perspective=Perspective.SYSTEM,
                 priority=Priority.MEDIUM,
                 title=f"Refactor {analysis.path}",
-                description=f"File has {analysis.lines} lines (max recommended: {MAX_FILE_LINES})",
+                description=f"File has {analysis.lines} lines (max recommended: {max_file_lines})",
                 file_path=analysis.path,
                 metric_current=analysis.lines,
-                metric_target=MAX_FILE_LINES,
+                metric_target=max_file_lines,
                 acceptance_criteria=[
                     "Extract related functions into separate modules",
-                    "Keep file under 300 lines",
+                    f"Keep file under {max_file_lines} lines",
                     "Maintain single responsibility"
                 ],
                 tags=["refactoring", "modularization"],
-                reason=f"File exceeds {MAX_FILE_LINES}-line limit by {analysis.lines - MAX_FILE_LINES} lines"
+                reason=f"File exceeds {max_file_lines}-line limit by {analysis.lines - max_file_lines} lines"
             ))
 
         for analysis in high_complexity:
@@ -201,17 +229,17 @@ class SystemPerspective(PerspectiveAnalyzer):
                 perspective=Perspective.SYSTEM,
                 priority=Priority.MEDIUM,
                 title=f"Reduce complexity in {analysis.path}",
-                description=f"Cyclomatic complexity is {analysis.complexity:.1f} (max: {COMPLEXITY_THRESHOLD})",
+                description=f"Cyclomatic complexity is {analysis.complexity:.1f} (max: {complexity_threshold})",
                 file_path=analysis.path,
                 metric_current=analysis.complexity,
-                metric_target=COMPLEXITY_THRESHOLD,
+                metric_target=complexity_threshold,
                 acceptance_criteria=[
                     "Extract complex conditions into named functions",
                     "Reduce nesting depth",
                     "Use early returns where appropriate"
                 ],
                 tags=["complexity", "readability"],
-                reason=f"Complexity {analysis.complexity:.1f} exceeds threshold {COMPLEXITY_THRESHOLD}"
+                reason=f"Complexity {analysis.complexity:.1f} exceeds threshold {complexity_threshold}"
             ))
 
         return {

@@ -270,5 +270,35 @@ class TestPromptFormatter(unittest.TestCase):
         self.assertIn("INFO: 1", output)
 
 
+    def test_custom_prompt_template(self):
+        """Custom prompt_title template should override default."""
+        formatter = PromptFormatter(templates={"prompt_title": ">> {priority}: {title}"})
+        p = Prompt(
+            perspective=Perspective.USER,
+            priority=Priority.HIGH,
+            title="Custom test",
+            description="desc",
+        )
+        output = formatter.format_prompt(p)
+        self.assertIn(">> HIGH: Custom test", output)
+        self.assertNotIn("[HIGH]", output)
+
+    def test_custom_header_template(self):
+        """Custom header_title template should override default."""
+        formatter = PromptFormatter(templates={"header_title": "VIEW: {perspective}"})
+        state = OrganismState(generation=1)
+        output = formatter.format_header(Perspective.TEST, 0.8, state)
+        self.assertIn("VIEW: TEST", output)
+        self.assertNotIn("PERSPECTIVE:", output)
+
+    def test_custom_summary_template(self):
+        """Custom summary_title template should override default."""
+        formatter = PromptFormatter(templates={"summary_title": "REPORT"})
+        state = OrganismState()
+        output = formatter.format_summary(state, [])
+        self.assertIn("REPORT", output)
+        self.assertNotIn("SUMMARY", output)
+
+
 if __name__ == "__main__":
     unittest.main()

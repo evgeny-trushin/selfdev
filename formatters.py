@@ -14,17 +14,25 @@ from models import (
 
 
 class PromptFormatter:
-    """Formats prompts for console output (plain text, no ANSI colors — see principle CLN)"""
+    """Formats prompts for console output (plain text, no ANSI colors — see principle CLN).
 
-    def __init__(self):
-        pass
+    Accepts an optional *templates* dict to override default format strings.
+    Supported keys:
+      - ``prompt_title``:  "{priority} {title}"
+      - ``header_title``:  "PERSPECTIVE: {perspective}"
+      - ``summary_title``: "SUMMARY"
+    """
+
+    def __init__(self, templates: dict = None):
+        self.templates = templates or {}
 
     def format_prompt(self, prompt: Prompt, fitness: float = None) -> str:
         """Format a single prompt with state context and actionable details"""
         lines = []
 
         priority_str = prompt.priority.name
-        lines.append(f"[{priority_str}] {prompt.title}")
+        title_tpl = self.templates.get("prompt_title", "[{priority}] {title}")
+        lines.append(title_tpl.format(priority=priority_str, title=prompt.title))
 
         # State context: perspective and fitness (principle G1)
         context_parts = [f"Perspective: {prompt.perspective.value}"]
@@ -57,11 +65,13 @@ class PromptFormatter:
     def format_header(self, perspective: Perspective, fitness: float, state: OrganismState) -> str:
         """Format the header for a perspective"""
         stage = state.get_stage()
+        header_tpl = self.templates.get(
+            "header_title", "PERSPECTIVE: {perspective}")
 
         lines = [
             "",
             "=" * 60,
-            f"  PERSPECTIVE: {perspective.value.upper()}",
+            f"  {header_tpl.format(perspective=perspective.value.upper())}",
             f"  Generation: {state.generation}  |  Stage: {stage.value}",
             f"  Fitness: {fitness:.2%}",
             "=" * 60,
@@ -71,10 +81,11 @@ class PromptFormatter:
 
     def format_summary(self, state: OrganismState, all_prompts: List[Prompt]) -> str:
         """Format a summary of all prompts"""
+        summary_title = self.templates.get("summary_title", "SUMMARY")
         lines = [
             "",
             "-" * 60,
-            "  SUMMARY",
+            f"  {summary_title}",
             "-" * 60,
             f"  Total Prompts: {len(all_prompts)}",
         ]
