@@ -48,7 +48,7 @@ def load_config(root_dir: Path = None) -> dict:
             with open(config_path, "r") as f:
                 user_config = json.load(f)
             defaults.update(user_config)
-        except (json.JSONDecodeError, TypeError):
+        except (json.JSONDecodeError, TypeError, OSError):
             pass
     return defaults
 
@@ -135,15 +135,18 @@ class OrganismState:
                 known_fields = {f.name for f in cls.__dataclass_fields__.values()}
                 filtered = {k: v for k, v in data.items() if k in known_fields}
                 return cls(**filtered)
-            except (json.JSONDecodeError, TypeError):
+            except (json.JSONDecodeError, TypeError, OSError):
                 pass
         return cls(created_at=datetime.now(timezone.utc).isoformat())
 
     def save(self, path: Path) -> None:
         """Save state to file"""
         self.last_updated = datetime.now(timezone.utc).isoformat()
-        with open(path, "w") as f:
-            json.dump(asdict(self), f, indent=2)
+        try:
+            with open(path, "w") as f:
+                json.dump(asdict(self), f, indent=2)
+        except OSError as e:
+            print(f"Warning: Could not save state to {path}: {e}")
 
     def get_stage(self) -> DevelopmentStage:
         """Get current development stage based on generation"""
