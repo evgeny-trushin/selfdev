@@ -21,6 +21,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+from performance import timed_operation, check_analysis_time, get_memory_usage_mb
+
 # Re-export all public symbols for backward compatibility
 from models import (  # noqa: F401
     ROOT_DIR,
@@ -97,13 +99,16 @@ class SelfDevelopmentOrganism:
         *run_all_perspectives*), no output is produced — the caller is
         responsible for global filtering and printing.
         """
-        analyzer = self.perspectives[perspective]
-        metrics, prompts = analyzer.analyze()
+        with timed_operation(perspective.value) as timing:
+            analyzer = self.perspectives[perspective]
+            metrics, prompts = analyzer.analyze()
 
-        fitness = analyzer.compute_fitness(metrics, prompts)
-        self.state.fitness_scores[perspective.value] = fitness
+            fitness = analyzer.compute_fitness(metrics, prompts)
+            self.state.fitness_scores[perspective.value] = fitness
 
-        prompts = sorted(prompts, key=lambda p: p.priority.value)
+            prompts = sorted(prompts, key=lambda p: p.priority.value)
+
+        self._last_timing = timing
 
         if print_results:
             print(self.formatter.format_header(perspective, fitness, self.state))
@@ -125,13 +130,16 @@ class SelfDevelopmentOrganism:
         highest priority across *all* of them, and displays only prompts
         at that level.
         """
-        per_perspective: Dict[Perspective, Tuple[float, List[Prompt]]] = {}
+        with timed_operation("all_perspectives") as timing:
+            per_perspective: Dict[Perspective, Tuple[float, List[Prompt]]] = {}
 
-        # Phase 1 — collect without printing
-        for perspective in Perspective:
-            prompts = self.run_perspective(perspective, print_results=False)
-            fitness = self.state.fitness_scores[perspective.value]
-            per_perspective[perspective] = (fitness, prompts)
+            # Phase 1 — collect without printing
+            for perspective in Perspective:
+                prompts = self.run_perspective(perspective, print_results=False)
+                fitness = self.state.fitness_scores[perspective.value]
+                per_perspective[perspective] = (fitness, prompts)
+
+        self._last_timing = timing
 
         # Determine global highest priority
         all_prompts = [p for _, ps in per_perspective.values() for p in ps]
@@ -159,6 +167,15 @@ class SelfDevelopmentOrganism:
                 displayed_prompts.extend(filtered)
             else:
                 print("  No issues found from this perspective.")
+
+        elapsed = timing["elapsed"]
+        mem_mb = get_memory_usage_mb()
+        perf_line = f"  Performance: {elapsed:.1f}s"
+        if mem_mb > 0:
+            perf_line += f" | Memory: {mem_mb:.1f} MB"
+        if not check_analysis_time(elapsed):
+            perf_line += " | WARNING: exceeded 30s budget"
+        print(perf_line)
 
         print(self.formatter.format_summary(self.state, displayed_prompts))
 
