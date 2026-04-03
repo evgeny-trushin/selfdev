@@ -70,11 +70,17 @@ class TestPromptDataclass(unittest.TestCase):
             metric_target=10.0,
             acceptance_criteria=["Reduce complexity"],
             tags=["refactoring"],
+            evaluative_evidence="Test failures",
+            directive_evidence="Fix the logic",
+            expected_next_state="Tests pass",
         )
         self.assertEqual(p.file_path, "src/module.py")
         self.assertEqual(p.line_number, 42)
         self.assertEqual(p.metric_current, 15.0)
         self.assertIn("Reduce complexity", p.acceptance_criteria)
+        self.assertEqual(p.evaluative_evidence, "Test failures")
+        self.assertEqual(p.directive_evidence, "Fix the logic")
+        self.assertEqual(p.expected_next_state, "Tests pass")
 
 
 class TestFileAnalysis(unittest.TestCase):

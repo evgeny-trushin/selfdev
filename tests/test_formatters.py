@@ -142,7 +142,10 @@ class TestPromptFormatter(unittest.TestCase):
             line_number=10,
             metric_current=5.0,
             metric_target=10.0,
-            acceptance_criteria=["Do this", "Do that"]
+            acceptance_criteria=["Do this", "Do that"],
+            evaluative_evidence="eval",
+            directive_evidence="dir",
+            expected_next_state="next"
         )
         output = formatter.format_prompt(p)
         self.assertIn("[MEDIUM]", output)
@@ -150,6 +153,9 @@ class TestPromptFormatter(unittest.TestCase):
         self.assertIn("Desc", output)
         self.assertIn("foo.py:10", output)
         self.assertIn("Current: 5.0 -> Target: 10.0", output)
+        self.assertIn("Evaluative Evidence: eval", output)
+        self.assertIn("Directive Evidence: dir", output)
+        self.assertIn("Expected Next State: next", output)
         self.assertIn("Acceptance Criteria:", output)
         self.assertIn("- Do this", output)
         self.assertIn("- Do that", output)

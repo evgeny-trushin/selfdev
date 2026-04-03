@@ -95,6 +95,9 @@ class Prompt:
     acceptance_criteria: List[str] = field(default_factory=list)
     tags: List[str] = field(default_factory=list)
     reason: str = ""
+    evaluative_evidence: Optional[str] = None
+    directive_evidence: Optional[str] = None
+    expected_next_state: Optional[str] = None
 
 
 @dataclass
