@@ -19,6 +19,14 @@ The system is considered "fit" when:
 - [G2 — Actionable](../principles/G2.md): Prompts must be immediately actionable
 - [M3 — Transparency](../principles/M3.md): Expected outcomes are documented
 
+## Acceptance Criteria
+
+- [ ] Each perspective (USER, TEST, SYSTEM, ANALYTICS, DEBUG) runs independently without errors
+- [ ] Prompts include title, description, priority, and acceptance_criteria fields
+- [ ] organism_state.json persists generation, fitness_scores, and fitness_history between runs
+- [ ] Fitness scores are floats between 0.0 and 1.0
+- [ ] No unhandled exceptions when running any perspective on an empty directory
+
 ## Verification
 
 - [ ] `develop.sh --user` runs without error
