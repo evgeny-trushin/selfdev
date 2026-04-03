@@ -55,6 +55,14 @@ class PromptFormatter:
         if prompt.reason:
             lines.append(f"  Reason: {prompt.reason}")
 
+        # Feedback-Driven Evidence Fields
+        if prompt.evaluative_evidence:
+            lines.append(f"  Evaluative Evidence: {prompt.evaluative_evidence}")
+        if prompt.directive_evidence:
+            lines.append(f"  Directive Evidence: {prompt.directive_evidence}")
+        if prompt.expected_next_state:
+            lines.append(f"  Expected Next State: {prompt.expected_next_state}")
+
         if prompt.acceptance_criteria:
             lines.append("  Acceptance Criteria:")
             for criterion in prompt.acceptance_criteria:

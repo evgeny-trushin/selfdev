@@ -159,6 +159,8 @@ class DebugPerspective(PerspectiveAnalyzer):
                 reason=f"{len(uncommitted)} modified files not yet committed"
             ))
 
+        self._generate_error_prompts(prompts)
+
         issue_count = len(all_issues) + len(todos)
         max_issues = 20
         fitness = max(0.1, 1 - (issue_count / max_issues))
@@ -199,6 +201,39 @@ class DebugPerspective(PerspectiveAnalyzer):
                 continue
 
         return todos
+
+    def _generate_error_prompts(self, prompts: List[Prompt]):
+        """Check for test failures and generate evidence-driven or missing-signal prompts."""
+        # Simple simulation: in a real implementation we would parse pytest output or logs.
+        # For this requirement, we'll look for a 'test_failures.log' file.
+        log_path = self.root_dir / "test_failures.log"
+        if log_path.exists():
+            content = log_path.read_text().strip()
+            if content:
+                prompts.append(Prompt(
+                    perspective=Perspective.DEBUG,
+                    priority=Priority.HIGH,
+                    title="Test failures detected",
+                    description="Tests are failing. Please fix them.",
+                    evaluative_evidence=f"Test failure log: {content[:100]}",
+                    directive_evidence="Review the stack trace and fix the logic",
+                    expected_next_state="tests pass and log is clear",
+                    acceptance_criteria=["Fix all failing tests"],
+                    reason="Found non-empty test_failures.log"
+                ))
+            else:
+                # File exists but empty -> missing evidence
+                prompts.append(Prompt(
+                    perspective=Perspective.DEBUG,
+                    priority=Priority.INFO,
+                    title="Missing test failure evidence",
+                    description="Test failure log exists but is empty.",
+                    evaluative_evidence="Missing exact logs",
+                    directive_evidence="Collect exact stderr output",
+                    expected_next_state="Logs available for root cause analysis",
+                    acceptance_criteria=["Collect specific test failures into test_failures.log"],
+                    reason="test_failures.log is empty"
+                ))
 
     def _generate_todo_prompts(self, todos: List[dict], prompts: List[Prompt]):
         """Generate prompts for found TODO/FIXME comments"""
