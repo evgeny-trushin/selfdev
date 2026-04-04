@@ -53,6 +53,9 @@ class UserPerspective(PerspectiveAnalyzer):
                 priority=Priority.CRITICAL,
                 title="Create README.md",
                 description="No README.md found. Users need documentation to understand the project.",
+                evaluative_evidence="Project root missing README.md (ls -a shows no matching file)",
+                directive_evidence="Create a README.md file in the root directory",
+                expected_next_state="README.md exists and contains basic usage instructions",
                 acceptance_criteria=[
                     "Create README.md in project root",
                     "Include project description",
@@ -74,6 +77,9 @@ class UserPerspective(PerspectiveAnalyzer):
                 file_path="README.md",
                 metric_current=len(content),
                 metric_target=2000,
+                evaluative_evidence=f"README.md length is {len(content)} chars (<500 chars)",
+                directive_evidence="Expand the README.md with more comprehensive usage and feature details",
+                expected_next_state="README.md length > 2000 chars",
                 acceptance_criteria=[
                     "Include installation instructions",
                     "Add at least 2 usage examples",
@@ -101,6 +107,9 @@ class UserPerspective(PerspectiveAnalyzer):
                 title="Add package description",
                 description="package.json lacks description field.",
                 file_path="package.json",
+                evaluative_evidence="package.json 'description' field is empty",
+                directive_evidence="Add a descriptive string to 'description' key in package.json",
+                expected_next_state="package.json parses successfully and contains non-empty description",
                 acceptance_criteria=["Add meaningful description to package.json"],
                 reason="package.json description field is empty or missing"
             ))

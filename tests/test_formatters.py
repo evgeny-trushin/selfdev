@@ -154,6 +154,22 @@ class TestPromptFormatter(unittest.TestCase):
         self.assertIn("- Do this", output)
         self.assertIn("- Do that", output)
 
+    def test_format_prompt_with_evidence(self):
+        formatter = PromptFormatter()
+        p = Prompt(
+            perspective=Perspective.DEBUG,
+            priority=Priority.HIGH,
+            title="Evidence Test",
+            description="Testing evidence fields",
+            evaluative_evidence="Found a bug",
+            directive_evidence="Fix the bug",
+            expected_next_state="No bugs found"
+        )
+        output = formatter.format_prompt(p)
+        self.assertIn("Evaluative Evidence: Found a bug", output)
+        self.assertIn("Directive Evidence: Fix the bug", output)
+        self.assertIn("Expected Next State: No bugs found", output)
+
 
     def test_format_summary_empty_prompts(self):
         """Summary with no prompts should still render."""

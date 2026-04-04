@@ -19,7 +19,7 @@ The system is considered "fit" when:
 - [G2 — Actionable](../principles/G2.md): Prompts must be immediately actionable
 - [M3 — Transparency](../principles/M3.md): Expected outcomes are documented
 
-## Verification
+## Acceptance Criteria
 
 - [ ] `develop.sh --user` runs without error
 - [ ] `develop.sh --test` runs without error

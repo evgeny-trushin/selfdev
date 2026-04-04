@@ -68,12 +68,18 @@ class TestPromptDataclass(unittest.TestCase):
             line_number=42,
             metric_current=15.0,
             metric_target=10.0,
+            evaluative_evidence="High cyclomatic complexity",
+            directive_evidence="Extract logic",
+            expected_next_state="Complexity is <= 10.0",
             acceptance_criteria=["Reduce complexity"],
             tags=["refactoring"],
         )
         self.assertEqual(p.file_path, "src/module.py")
         self.assertEqual(p.line_number, 42)
         self.assertEqual(p.metric_current, 15.0)
+        self.assertEqual(p.evaluative_evidence, "High cyclomatic complexity")
+        self.assertEqual(p.directive_evidence, "Extract logic")
+        self.assertEqual(p.expected_next_state, "Complexity is <= 10.0")
         self.assertIn("Reduce complexity", p.acceptance_criteria)
 
 

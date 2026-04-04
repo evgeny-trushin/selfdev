@@ -92,6 +92,9 @@ class Prompt:
     line_number: Optional[int] = None
     metric_current: Optional[float] = None
     metric_target: Optional[float] = None
+    evaluative_evidence: Optional[str] = None
+    directive_evidence: Optional[str] = None
+    expected_next_state: Optional[str] = None
     acceptance_criteria: List[str] = field(default_factory=list)
     tags: List[str] = field(default_factory=list)
     reason: str = ""

@@ -39,6 +39,9 @@ class AnalyticsPerspective(PerspectiveAnalyzer):
                 priority=Priority.INFO,
                 title="Insufficient history for trend analysis",
                 description="Run more generations to enable trend analysis.",
+                evaluative_evidence=f"Fitness history contains only {len(history)} entries (needs >=2)",
+                directive_evidence="Run the development cycle multiple times to collect metrics",
+                expected_next_state="History array has >= 2 completed generations",
                 acceptance_criteria=[
                     "Complete at least 2 generations to build fitness history",
                     "Run ./develop.sh after each increment to record metrics"
@@ -62,6 +65,9 @@ class AnalyticsPerspective(PerspectiveAnalyzer):
                     description=f"Average fitness dropped by {abs(trend):.2f} over recent generations.",
                     metric_current=avg_recent,
                     metric_target=avg_older,
+                    evaluative_evidence=f"Average fitness dropped from {avg_older:.2f} to {avg_recent:.2f} (trend {trend:+.2f})",
+                    directive_evidence="Review recent commits to identify regression sources",
+                    expected_next_state="Subsequent fitness trends return to positive or zero",
                     acceptance_criteria=[
                         "Review recent changes",
                         "Identify regression sources",
@@ -75,6 +81,9 @@ class AnalyticsPerspective(PerspectiveAnalyzer):
                     priority=Priority.INFO,
                     title="Positive fitness trend",
                     description=f"Fitness improved by {trend:.2f}. Keep current trajectory.",
+                    evaluative_evidence=f"Fitness improved by {trend:+.2f}",
+                    directive_evidence="Review positive changes for best practices",
+                    expected_next_state="Sustained fitness improvement in future metrics",
                     acceptance_criteria=[
                         "Continue current development approach",
                         "Monitor for sustained improvement"
@@ -92,6 +101,9 @@ class AnalyticsPerspective(PerspectiveAnalyzer):
                     priority=Priority.MEDIUM,
                     title="High bug fix rate detected",
                     description=f"{fix_commits}/{len(commits)} recent commits are fixes.",
+                    evaluative_evidence=f"{fix_commits} out of {len(commits)} recent commits contain 'fix'",
+                    directive_evidence="Review test coverage and bug introduction rate",
+                    expected_next_state="Bug fix ratio drops below 50% in subsequent commits",
                     acceptance_criteria=[
                         "Improve test coverage",
                         "Add pre-commit hooks",
@@ -137,6 +149,9 @@ class DebugPerspective(PerspectiveAnalyzer):
                 title=f"Code issue in {file_path}",
                 description=issue_text,
                 file_path=file_path,
+                evaluative_evidence=f"CodeAnalyzer found issue: '{issue_text}' in {file_path}",
+                directive_evidence=f"Resolve the issue in {file_path}",
+                expected_next_state=f"CodeAnalyzer reports 0 issues for {file_path}",
                 acceptance_criteria=["Resolve the reported code quality issue"],
                 tags=["code-quality"],
                 reason=f"Static analysis detected issue in {file_path}"
@@ -152,6 +167,9 @@ class DebugPerspective(PerspectiveAnalyzer):
                 priority=Priority.MEDIUM,
                 title="Uncommitted changes detected",
                 description=f"{len(uncommitted)} files have uncommitted changes.",
+                evaluative_evidence=f"git status shows {len(uncommitted)} uncommitted files",
+                directive_evidence="Review changes and run git commit",
+                expected_next_state="git status working tree is clean",
                 acceptance_criteria=[
                     "Review and commit changes",
                     "Or stash if work in progress"
@@ -211,6 +229,9 @@ class DebugPerspective(PerspectiveAnalyzer):
                 description=f"Found in {todo['file']}:{todo['line']}",
                 file_path=todo["file"],
                 line_number=todo["line"],
+                evaluative_evidence=f"Found {todo['type']} comment at {todo['file']}:{todo['line']}",
+                directive_evidence=f"Resolve the issue detailed in the comment: '{todo['text']}'",
+                expected_next_state=f"The comment at {todo['file']}:{todo['line']} is resolved and removed",
                 acceptance_criteria=[
                     f"Address the {todo['type']} comment",
                     "Remove or update the comment after resolution"

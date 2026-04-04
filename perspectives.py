@@ -88,6 +88,9 @@ class TestPerspective(PerspectiveAnalyzer):
                 priority=Priority.CRITICAL,
                 title="Create test directory",
                 description="No test directory found. Tests are essential for code quality.",
+                evaluative_evidence="No test files detected in known test directories",
+                directive_evidence="Run 'mkdir tests' and add initial test suite",
+                expected_next_state="Running test command discovers at least one passing test",
                 acceptance_criteria=[
                     "Create tests/ directory",
                     "Add at least one test file",
@@ -120,6 +123,9 @@ class TestPerspective(PerspectiveAnalyzer):
                 description=f"Only {test_count} test files for {source_count} source files.",
                 metric_current=coverage_ratio * 100,
                 metric_target=coverage_target,
+                evaluative_evidence=f"Found {test_count} test files for {source_count} source files",
+                directive_evidence=f"Add test files corresponding to untested source modules",
+                expected_next_state=f"Coverage ratio is at least 50%",
                 acceptance_criteria=[
                     f"Add tests for {max(1, source_count - test_count)} more modules",
                     "Achieve at least 50% file coverage"
@@ -141,6 +147,9 @@ class TestPerspective(PerspectiveAnalyzer):
                 file_path=analysis.path,
                 metric_current=analysis.complexity,
                 metric_target=complexity_threshold,
+                evaluative_evidence=f"File {analysis.path} has complexity {analysis.complexity:.1f} but no test file",
+                directive_evidence=f"Create a test file for {analysis.path}",
+                expected_next_state=f"A test file exists that imports and tests functions from {analysis.path}",
                 acceptance_criteria=[
                     "Create corresponding test file",
                     "Test main functions",
@@ -188,6 +197,9 @@ class SystemPerspective(PerspectiveAnalyzer):
                 priority=Priority.INFO,
                 title="No Python files to analyze",
                 description="No Python source files found in standard directories.",
+                evaluative_evidence="0 Python files found by CodeAnalyzer in standard directories",
+                directive_evidence="Ensure standard directories (src/, lib/) contain Python source files",
+                expected_next_state="CodeAnalyzer returns >0 parsed files",
                 acceptance_criteria=[
                     "Add Python source files to standard directories (src/, lib/, etc.)",
                     "Or specify a custom root with --root"
@@ -215,6 +227,9 @@ class SystemPerspective(PerspectiveAnalyzer):
                 file_path=analysis.path,
                 metric_current=analysis.lines,
                 metric_target=max_file_lines,
+                evaluative_evidence=f"File has {analysis.lines} lines (limit {max_file_lines})",
+                directive_evidence="Extract related functions into separate modules",
+                expected_next_state=f"File length is <= {max_file_lines} lines",
                 acceptance_criteria=[
                     "Extract related functions into separate modules",
                     f"Keep file under {max_file_lines} lines",
@@ -233,6 +248,9 @@ class SystemPerspective(PerspectiveAnalyzer):
                 file_path=analysis.path,
                 metric_current=analysis.complexity,
                 metric_target=complexity_threshold,
+                evaluative_evidence=f"Cyclomatic complexity is {analysis.complexity:.1f} (threshold {complexity_threshold})",
+                directive_evidence="Extract complex conditions into smaller named functions",
+                expected_next_state=f"Cyclomatic complexity <= {complexity_threshold}",
                 acceptance_criteria=[
                     "Extract complex conditions into named functions",
                     "Reduce nesting depth",
