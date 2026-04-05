@@ -20,6 +20,7 @@ from models import (
     load_config,
 )
 from analyzers import CodeAnalyzer, GitAnalyzer
+from layered_analysis import analyze_layers
 
 
 class PerspectiveAnalyzer(ABC):
@@ -259,6 +260,10 @@ class SystemPerspective(PerspectiveAnalyzer):
                 tags=["complexity", "readability"],
                 reason=f"Complexity {analysis.complexity:.1f} exceeds threshold {complexity_threshold}"
             ))
+
+        # Layer-aware analysis (INCREMENT 0015)
+        _file_layers, layer_prompts = analyze_layers(self.root_dir, analyses)
+        prompts.extend(layer_prompts)
 
         return {
             "complexity": fitness,
