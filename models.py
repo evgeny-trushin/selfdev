@@ -79,6 +79,13 @@ class Priority(Enum):
     INFO = 5
 
 
+class Layer(Enum):
+    UI = "ui"
+    CLIENT = "client"
+    SERVICE = "service"
+    CROSS_LAYER = "cross_layer"
+
+
 # ==================== Data Classes ====================
 
 @dataclass
@@ -90,6 +97,14 @@ class Prompt:
     description: str
     file_path: Optional[str] = None
     line_number: Optional[int] = None
+    layer: Optional[Layer] = None
+    ui_details: Optional[str] = None
+    client_details: Optional[str] = None
+    service_details: Optional[str] = None
+    boundary_details: Optional[str] = None
+    affected_view: Optional[str] = None
+    route: Optional[str] = None
+    contract: Optional[str] = None
     metric_current: Optional[float] = None
     metric_target: Optional[float] = None
     evaluative_evidence: Optional[str] = None
