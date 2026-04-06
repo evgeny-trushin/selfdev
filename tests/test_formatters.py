@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from models import OrganismState, Perspective, Priority, Prompt
+from models import OrganismState, Perspective, Priority, Layer, Prompt
 from formatters import PromptFormatter
 
 
@@ -169,6 +169,32 @@ class TestPromptFormatter(unittest.TestCase):
         self.assertIn("Evaluative Evidence: Found a bug", output)
         self.assertIn("Directive Evidence: Fix the bug", output)
         self.assertIn("Expected Next State: No bugs found", output)
+
+    def test_format_prompt_with_layer_details(self):
+        formatter = PromptFormatter()
+        p = Prompt(
+            perspective=Perspective.USER,
+            priority=Priority.HIGH,
+            title="Layer Test",
+            description="Testing layer detail fields",
+            layer=Layer.UI,
+            ui_details="Button is misaligned",
+            affected_view="LoginScreen",
+            client_details="Failed to fetch",
+            service_details="API down",
+            route="/api/login",
+            contract="LoginRequest",
+            boundary_details="Schema mismatch"
+        )
+        output = formatter.format_prompt(p)
+        self.assertIn("Layer: UI", output)
+        self.assertIn("UI Details: Button is misaligned", output)
+        self.assertIn("Affected View: LoginScreen", output)
+        self.assertIn("Client Details: Failed to fetch", output)
+        self.assertIn("Service Details: API down", output)
+        self.assertIn("Route: /api/login", output)
+        self.assertIn("Contract: LoginRequest", output)
+        self.assertIn("Boundary Details: Schema mismatch", output)
 
 
     def test_format_summary_empty_prompts(self):

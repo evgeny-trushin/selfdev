@@ -55,6 +55,24 @@ class PromptFormatter:
         if prompt.reason:
             lines.append(f"  Reason: {prompt.reason}")
 
+        # Layer fields
+        if prompt.layer:
+            lines.append(f"  Layer: {prompt.layer.value.upper()}")
+        if prompt.ui_details:
+            lines.append(f"  UI Details: {prompt.ui_details}")
+        if prompt.affected_view:
+            lines.append(f"  Affected View: {prompt.affected_view}")
+        if prompt.client_details:
+            lines.append(f"  Client Details: {prompt.client_details}")
+        if prompt.service_details:
+            lines.append(f"  Service Details: {prompt.service_details}")
+        if prompt.route:
+            lines.append(f"  Route: {prompt.route}")
+        if prompt.contract:
+            lines.append(f"  Contract: {prompt.contract}")
+        if prompt.boundary_details:
+            lines.append(f"  Boundary Details: {prompt.boundary_details}")
+
         if prompt.evaluative_evidence:
             lines.append(f"  Evaluative Evidence: {prompt.evaluative_evidence}")
         if prompt.directive_evidence:

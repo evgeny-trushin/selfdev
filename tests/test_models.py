@@ -12,6 +12,7 @@ from models import (
     DevelopmentStage,
     Perspective,
     Priority,
+    Layer,
     Prompt,
     FileAnalysis,
     OrganismState,
@@ -81,6 +82,21 @@ class TestPromptDataclass(unittest.TestCase):
         self.assertEqual(p.directive_evidence, "Extract logic")
         self.assertEqual(p.expected_next_state, "Complexity is <= 10.0")
         self.assertIn("Reduce complexity", p.acceptance_criteria)
+
+    def test_prompt_layer_fields(self):
+        p = Prompt(
+            perspective=Perspective.SYSTEM,
+            priority=Priority.MEDIUM,
+            title="Layer test",
+            description="Testing layer attributes",
+            layer=Layer.UI,
+            ui_details="Button is misaligned",
+            affected_view="LoginScreen"
+        )
+        self.assertEqual(p.layer, Layer.UI)
+        self.assertEqual(p.ui_details, "Button is misaligned")
+        self.assertEqual(p.affected_view, "LoginScreen")
+        self.assertIsNone(p.client_details)
 
 
 class TestFileAnalysis(unittest.TestCase):
