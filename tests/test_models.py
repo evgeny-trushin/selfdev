@@ -15,6 +15,7 @@ from models import (
     Prompt,
     FileAnalysis,
     OrganismState,
+    Layer,
 )
 
 
@@ -40,6 +41,12 @@ class TestEnums(unittest.TestCase):
         self.assertLess(Priority.HIGH.value, Priority.MEDIUM.value)
         self.assertLess(Priority.MEDIUM.value, Priority.LOW.value)
         self.assertLess(Priority.LOW.value, Priority.INFO.value)
+
+    def test_layer_enum(self):
+        self.assertEqual(Layer.UI.value, "ui")
+        self.assertEqual(Layer.CLIENT.value, "client")
+        self.assertEqual(Layer.SERVICE.value, "service")
+        self.assertEqual(Layer.CROSS_LAYER.value, "cross_layer")
 
 
 class TestPromptDataclass(unittest.TestCase):
@@ -71,6 +78,14 @@ class TestPromptDataclass(unittest.TestCase):
             evaluative_evidence="High cyclomatic complexity",
             directive_evidence="Extract logic",
             expected_next_state="Complexity is <= 10.0",
+            layer=Layer.SERVICE,
+            ui_details="Some UI details",
+            client_details="Some client details",
+            service_details="Some service details",
+            boundary_details="Some boundary details",
+            affected_view="Some affected view",
+            route="/api/test",
+            contract="Some contract",
             acceptance_criteria=["Reduce complexity"],
             tags=["refactoring"],
         )
@@ -80,6 +95,14 @@ class TestPromptDataclass(unittest.TestCase):
         self.assertEqual(p.evaluative_evidence, "High cyclomatic complexity")
         self.assertEqual(p.directive_evidence, "Extract logic")
         self.assertEqual(p.expected_next_state, "Complexity is <= 10.0")
+        self.assertEqual(p.layer, Layer.SERVICE)
+        self.assertEqual(p.ui_details, "Some UI details")
+        self.assertEqual(p.client_details, "Some client details")
+        self.assertEqual(p.service_details, "Some service details")
+        self.assertEqual(p.boundary_details, "Some boundary details")
+        self.assertEqual(p.affected_view, "Some affected view")
+        self.assertEqual(p.route, "/api/test")
+        self.assertEqual(p.contract, "Some contract")
         self.assertIn("Reduce complexity", p.acceptance_criteria)
 
 
