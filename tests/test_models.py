@@ -12,6 +12,7 @@ from models import (
     DevelopmentStage,
     Perspective,
     Priority,
+    Layer,
     Prompt,
     FileAnalysis,
     OrganismState,
@@ -40,6 +41,14 @@ class TestEnums(unittest.TestCase):
         self.assertLess(Priority.HIGH.value, Priority.MEDIUM.value)
         self.assertLess(Priority.MEDIUM.value, Priority.LOW.value)
         self.assertLess(Priority.LOW.value, Priority.INFO.value)
+
+    def test_layer_enum(self):
+        self.assertEqual(len(Layer), 4)
+        values = [l.value for l in Layer]
+        self.assertIn("ui", values)
+        self.assertIn("client", values)
+        self.assertIn("service", values)
+        self.assertIn("cross_layer", values)
 
 
 class TestPromptDataclass(unittest.TestCase):
@@ -81,6 +90,30 @@ class TestPromptDataclass(unittest.TestCase):
         self.assertEqual(p.directive_evidence, "Extract logic")
         self.assertEqual(p.expected_next_state, "Complexity is <= 10.0")
         self.assertIn("Reduce complexity", p.acceptance_criteria)
+
+    def test_prompt_layer_fields(self):
+        p = Prompt(
+            perspective=Perspective.USER,
+            priority=Priority.HIGH,
+            title="UI issue",
+            description="Fix button",
+            layer=Layer.UI,
+            ui_details="login form layout",
+            client_details="client fetch user",
+            service_details="user service error",
+            boundary_details="status code mismatch",
+            affected_view="login screen",
+            route="/api/login",
+            contract="login request schema"
+        )
+        self.assertEqual(p.layer, Layer.UI)
+        self.assertEqual(p.ui_details, "login form layout")
+        self.assertEqual(p.client_details, "client fetch user")
+        self.assertEqual(p.service_details, "user service error")
+        self.assertEqual(p.boundary_details, "status code mismatch")
+        self.assertEqual(p.affected_view, "login screen")
+        self.assertEqual(p.route, "/api/login")
+        self.assertEqual(p.contract, "login request schema")
 
 
 class TestFileAnalysis(unittest.TestCase):
