@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from models import (
     DevelopmentStage,
     Perspective,
+    Layer,
     Priority,
     Prompt,
     FileAnalysis,
@@ -40,6 +41,14 @@ class TestEnums(unittest.TestCase):
         self.assertLess(Priority.HIGH.value, Priority.MEDIUM.value)
         self.assertLess(Priority.MEDIUM.value, Priority.LOW.value)
         self.assertLess(Priority.LOW.value, Priority.INFO.value)
+
+    def test_layers(self):
+        self.assertEqual(len(Layer), 4)
+        values = [l.value for l in Layer]
+        self.assertIn("ui", values)
+        self.assertIn("client", values)
+        self.assertIn("service", values)
+        self.assertIn("cross_layer", values)
 
 
 class TestPromptDataclass(unittest.TestCase):
@@ -81,6 +90,30 @@ class TestPromptDataclass(unittest.TestCase):
         self.assertEqual(p.directive_evidence, "Extract logic")
         self.assertEqual(p.expected_next_state, "Complexity is <= 10.0")
         self.assertIn("Reduce complexity", p.acceptance_criteria)
+
+    def test_prompt_creation_layer(self):
+        p = Prompt(
+            perspective=Perspective.SYSTEM,
+            priority=Priority.HIGH,
+            title="Fix UI",
+            description="Fix UI logic",
+            layer=Layer.UI,
+            ui_details="Button is misaligned",
+            client_details="Failed to fetch",
+            service_details="API timeout",
+            boundary_details="Mismatch in fields",
+            affected_view="Dashboard",
+            route="/api/data",
+            contract="DataSchema",
+        )
+        self.assertEqual(p.layer, Layer.UI)
+        self.assertEqual(p.ui_details, "Button is misaligned")
+        self.assertEqual(p.client_details, "Failed to fetch")
+        self.assertEqual(p.service_details, "API timeout")
+        self.assertEqual(p.boundary_details, "Mismatch in fields")
+        self.assertEqual(p.affected_view, "Dashboard")
+        self.assertEqual(p.route, "/api/data")
+        self.assertEqual(p.contract, "DataSchema")
 
 
 class TestFileAnalysis(unittest.TestCase):
