@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from models import OrganismState, Perspective, Priority, Prompt
+from models import OrganismState, Perspective, Layer, Priority, Prompt
 from formatters import PromptFormatter
 
 
@@ -169,6 +169,32 @@ class TestPromptFormatter(unittest.TestCase):
         self.assertIn("Evaluative Evidence: Found a bug", output)
         self.assertIn("Directive Evidence: Fix the bug", output)
         self.assertIn("Expected Next State: No bugs found", output)
+
+    def test_format_prompt_with_layer_fields(self):
+        formatter = PromptFormatter()
+        p = Prompt(
+            perspective=Perspective.SYSTEM,
+            priority=Priority.HIGH,
+            title="Layer Test",
+            description="Testing layer fields",
+            layer=Layer.CROSS_LAYER,
+            ui_details="Missing loader",
+            client_details="No retry",
+            service_details="API 500",
+            boundary_details="Drift",
+            affected_view="List",
+            route="/api",
+            contract="ListSchema"
+        )
+        output = formatter.format_prompt(p)
+        self.assertIn("Layer: cross_layer", output)
+        self.assertIn("UI Details: Missing loader", output)
+        self.assertIn("Client Details: No retry", output)
+        self.assertIn("Service Details: API 500", output)
+        self.assertIn("Boundary Details: Drift", output)
+        self.assertIn("Affected View: List", output)
+        self.assertIn("Route: /api", output)
+        self.assertIn("Contract: ListSchema", output)
 
 
     def test_format_summary_empty_prompts(self):
