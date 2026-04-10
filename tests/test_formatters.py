@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from models import OrganismState, Perspective, Priority, Prompt
+from models import OrganismState, Perspective, Layer, Priority, Prompt
 from formatters import PromptFormatter
 
 
@@ -169,6 +169,32 @@ class TestPromptFormatter(unittest.TestCase):
         self.assertIn("Evaluative Evidence: Found a bug", output)
         self.assertIn("Directive Evidence: Fix the bug", output)
         self.assertIn("Expected Next State: No bugs found", output)
+
+    def test_format_prompt_with_layer_details(self):
+        formatter = PromptFormatter()
+        p = Prompt(
+            perspective=Perspective.SYSTEM,
+            priority=Priority.MEDIUM,
+            title="Layer Detail Test",
+            description="Testing layer details output",
+            layer=Layer.UI,
+            ui_details="Header is too large",
+            client_details="Failed to fetch list",
+            service_details="Timeout error",
+            boundary_details="Types mismatch",
+            affected_view="List Screen",
+            route="/api/items",
+            contract="ItemDTO",
+        )
+        output = formatter.format_prompt(p)
+        self.assertIn("Layer: UI", output)
+        self.assertIn("UI Details: Header is too large", output)
+        self.assertIn("Client Details: Failed to fetch list", output)
+        self.assertIn("Service Details: Timeout error", output)
+        self.assertIn("Boundary Details: Types mismatch", output)
+        self.assertIn("Affected View: List Screen", output)
+        self.assertIn("Route: /api/items", output)
+        self.assertIn("Contract: ItemDTO", output)
 
 
     def test_format_summary_empty_prompts(self):

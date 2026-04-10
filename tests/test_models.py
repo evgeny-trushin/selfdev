@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from models import (
     DevelopmentStage,
     Perspective,
+    Layer,
     Priority,
     Prompt,
     FileAnalysis,
@@ -40,6 +41,14 @@ class TestEnums(unittest.TestCase):
         self.assertLess(Priority.HIGH.value, Priority.MEDIUM.value)
         self.assertLess(Priority.MEDIUM.value, Priority.LOW.value)
         self.assertLess(Priority.LOW.value, Priority.INFO.value)
+
+    def test_layers(self):
+        self.assertEqual(len(Layer), 4)
+        values = [l.value for l in Layer]
+        self.assertIn("ui", values)
+        self.assertIn("client", values)
+        self.assertIn("service", values)
+        self.assertIn("cross_layer", values)
 
 
 class TestPromptDataclass(unittest.TestCase):
@@ -81,6 +90,30 @@ class TestPromptDataclass(unittest.TestCase):
         self.assertEqual(p.directive_evidence, "Extract logic")
         self.assertEqual(p.expected_next_state, "Complexity is <= 10.0")
         self.assertIn("Reduce complexity", p.acceptance_criteria)
+
+    def test_prompt_creation_layered(self):
+        p = Prompt(
+            perspective=Perspective.SYSTEM,
+            priority=Priority.MEDIUM,
+            title="Layer test",
+            description="Testing layered analysis",
+            layer=Layer.UI,
+            ui_details="Button is misaligned",
+            affected_view="Dashboard",
+            client_details="Missing retry logic",
+            service_details="Validation rule failed",
+            boundary_details="Status code mismatch",
+            route="/api/data",
+            contract="DataDTO",
+        )
+        self.assertEqual(p.layer, Layer.UI)
+        self.assertEqual(p.ui_details, "Button is misaligned")
+        self.assertEqual(p.affected_view, "Dashboard")
+        self.assertEqual(p.client_details, "Missing retry logic")
+        self.assertEqual(p.service_details, "Validation rule failed")
+        self.assertEqual(p.boundary_details, "Status code mismatch")
+        self.assertEqual(p.route, "/api/data")
+        self.assertEqual(p.contract, "DataDTO")
 
 
 class TestFileAnalysis(unittest.TestCase):
