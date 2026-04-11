@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from models import OrganismState, Perspective, Priority, Prompt
+from models import OrganismState, Perspective, Priority, Layer, Prompt
 from formatters import PromptFormatter
 
 
@@ -170,6 +170,23 @@ class TestPromptFormatter(unittest.TestCase):
         self.assertIn("Directive Evidence: Fix the bug", output)
         self.assertIn("Expected Next State: No bugs found", output)
 
+    def test_format_prompt_with_layer_details(self):
+        formatter = PromptFormatter()
+        p = Prompt(
+            perspective=Perspective.USER,
+            priority=Priority.HIGH,
+            title="Layer Test",
+            description="Testing layer details",
+            layer=Layer.UI,
+            ui_details="Button is misaligned",
+            affected_view="LoginScreen",
+            contract="User schema"
+        )
+        output = formatter.format_prompt(p)
+        self.assertIn("Layer: ui", output)
+        self.assertIn("UI Details: Button is misaligned", output)
+        self.assertIn("Affected View: LoginScreen", output)
+        self.assertIn("Contract: User schema", output)
 
     def test_format_summary_empty_prompts(self):
         """Summary with no prompts should still render."""
