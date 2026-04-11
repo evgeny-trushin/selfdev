@@ -12,6 +12,7 @@ from models import (
     DevelopmentStage,
     Perspective,
     Priority,
+    Layer,
     Prompt,
     FileAnalysis,
     OrganismState,
@@ -40,6 +41,14 @@ class TestEnums(unittest.TestCase):
         self.assertLess(Priority.HIGH.value, Priority.MEDIUM.value)
         self.assertLess(Priority.MEDIUM.value, Priority.LOW.value)
         self.assertLess(Priority.LOW.value, Priority.INFO.value)
+
+    def test_layers(self):
+        self.assertEqual(len(Layer), 4)
+        values = [l.value for l in Layer]
+        self.assertIn("ui", values)
+        self.assertIn("client", values)
+        self.assertIn("service", values)
+        self.assertIn("cross_layer", values)
 
 
 class TestPromptDataclass(unittest.TestCase):
@@ -71,6 +80,9 @@ class TestPromptDataclass(unittest.TestCase):
             evaluative_evidence="High cyclomatic complexity",
             directive_evidence="Extract logic",
             expected_next_state="Complexity is <= 10.0",
+            layer=Layer.UI,
+            ui_details="Button is misaligned",
+            affected_view="LoginScreen",
             acceptance_criteria=["Reduce complexity"],
             tags=["refactoring"],
         )
@@ -80,6 +92,9 @@ class TestPromptDataclass(unittest.TestCase):
         self.assertEqual(p.evaluative_evidence, "High cyclomatic complexity")
         self.assertEqual(p.directive_evidence, "Extract logic")
         self.assertEqual(p.expected_next_state, "Complexity is <= 10.0")
+        self.assertEqual(p.layer, Layer.UI)
+        self.assertEqual(p.ui_details, "Button is misaligned")
+        self.assertEqual(p.affected_view, "LoginScreen")
         self.assertIn("Reduce complexity", p.acceptance_criteria)
 
 
