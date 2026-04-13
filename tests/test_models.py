@@ -12,6 +12,7 @@ from models import (
     DevelopmentStage,
     Perspective,
     Priority,
+    Layer,
     Prompt,
     FileAnalysis,
     OrganismState,
@@ -40,6 +41,12 @@ class TestEnums(unittest.TestCase):
         self.assertLess(Priority.HIGH.value, Priority.MEDIUM.value)
         self.assertLess(Priority.MEDIUM.value, Priority.LOW.value)
         self.assertLess(Priority.LOW.value, Priority.INFO.value)
+
+    def test_layer_enum(self):
+        self.assertEqual(Layer.UI.value, "ui")
+        self.assertEqual(Layer.CLIENT.value, "client")
+        self.assertEqual(Layer.SERVICE.value, "service")
+        self.assertEqual(Layer.CROSS_LAYER.value, "cross_layer")
 
 
 class TestPromptDataclass(unittest.TestCase):
@@ -81,6 +88,32 @@ class TestPromptDataclass(unittest.TestCase):
         self.assertEqual(p.directive_evidence, "Extract logic")
         self.assertEqual(p.expected_next_state, "Complexity is <= 10.0")
         self.assertIn("Reduce complexity", p.acceptance_criteria)
+
+    def test_prompt_layer_details(self):
+        p = Prompt(
+            perspective=Perspective.USER,
+            priority=Priority.HIGH,
+            title="UI State Issue",
+            description="Loading state missing",
+            layer=Layer.UI,
+            ui_details="Missing loading state spinner",
+            affected_view="Dashboard",
+            state_transition="to_loading_state",
+            client_details="client fetches data",
+            service_details="API call /data",
+            boundary_details="No match in schema",
+            route="/api/v1/dashboard",
+            contract="DashboardContract"
+        )
+        self.assertEqual(p.layer, Layer.UI)
+        self.assertEqual(p.ui_details, "Missing loading state spinner")
+        self.assertEqual(p.affected_view, "Dashboard")
+        self.assertEqual(p.state_transition, "to_loading_state")
+        self.assertEqual(p.client_details, "client fetches data")
+        self.assertEqual(p.service_details, "API call /data")
+        self.assertEqual(p.boundary_details, "No match in schema")
+        self.assertEqual(p.route, "/api/v1/dashboard")
+        self.assertEqual(p.contract, "DashboardContract")
 
 
 class TestFileAnalysis(unittest.TestCase):
