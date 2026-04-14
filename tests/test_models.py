@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from models import (
     DevelopmentStage,
+    Layer,
     Perspective,
     Priority,
     Prompt,
@@ -19,6 +20,15 @@ from models import (
 
 
 class TestEnums(unittest.TestCase):
+
+    def test_layer_enum(self):
+        self.assertEqual(len(Layer), 4)
+        values = [l.value for l in Layer]
+        self.assertIn("ui", values)
+        self.assertIn("client", values)
+        self.assertIn("service", values)
+        self.assertIn("cross_layer", values)
+
 
     def test_development_stages(self):
         self.assertEqual(DevelopmentStage.EMBRYONIC.value, "embryonic")
@@ -81,6 +91,32 @@ class TestPromptDataclass(unittest.TestCase):
         self.assertEqual(p.directive_evidence, "Extract logic")
         self.assertEqual(p.expected_next_state, "Complexity is <= 10.0")
         self.assertIn("Reduce complexity", p.acceptance_criteria)
+
+    def test_prompt_layer_fields(self):
+        p = Prompt(
+            perspective=Perspective.USER,
+            priority=Priority.HIGH,
+            title="Layer test",
+            description="Testing layer fields",
+            layer=Layer.UI,
+            ui_details="Button is misaligned",
+            client_details="Data fetching fails",
+            service_details="API returns 500",
+            boundary_details="Schema mismatch",
+            affected_view="LoginScreen",
+            route="/api/login",
+            contract="LoginRequest",
+            state_transition="Loading -> Error"
+        )
+        self.assertEqual(p.layer, Layer.UI)
+        self.assertEqual(p.ui_details, "Button is misaligned")
+        self.assertEqual(p.client_details, "Data fetching fails")
+        self.assertEqual(p.service_details, "API returns 500")
+        self.assertEqual(p.boundary_details, "Schema mismatch")
+        self.assertEqual(p.affected_view, "LoginScreen")
+        self.assertEqual(p.route, "/api/login")
+        self.assertEqual(p.contract, "LoginRequest")
+        self.assertEqual(p.state_transition, "Loading -> Error")
 
 
 class TestFileAnalysis(unittest.TestCase):
