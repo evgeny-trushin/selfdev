@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from models import OrganismState, Perspective, Priority, Prompt
+from models import Layer, OrganismState, Perspective, Priority, Prompt
 from formatters import PromptFormatter
 
 
@@ -170,6 +170,33 @@ class TestPromptFormatter(unittest.TestCase):
         self.assertIn("Directive Evidence: Fix the bug", output)
         self.assertIn("Expected Next State: No bugs found", output)
 
+    def test_format_prompt_with_layer_fields(self):
+        formatter = PromptFormatter()
+        p = Prompt(
+            perspective=Perspective.SYSTEM,
+            priority=Priority.HIGH,
+            title="Layer field rendering",
+            description="Testing layer-related fields",
+            layer=Layer.CROSS_LAYER,
+            ui_details="Button invisible",
+            client_details="Store corrupted",
+            service_details="Data base timeout",
+            boundary_details="Types mismatch",
+            affected_view="Dashboard",
+            route="/api/data",
+            contract="DataResponse",
+            state_transition="Idle -> Fetching"
+        )
+        output = formatter.format_prompt(p)
+        self.assertIn("Layer: cross_layer", output)
+        self.assertIn("UI Details: Button invisible", output)
+        self.assertIn("Client Details: Store corrupted", output)
+        self.assertIn("Service Details: Data base timeout", output)
+        self.assertIn("Boundary Details: Types mismatch", output)
+        self.assertIn("Affected View: Dashboard", output)
+        self.assertIn("Route: /api/data", output)
+        self.assertIn("Contract: DataResponse", output)
+        self.assertIn("State Transition: Idle -> Fetching", output)
 
     def test_format_summary_empty_prompts(self):
         """Summary with no prompts should still render."""
