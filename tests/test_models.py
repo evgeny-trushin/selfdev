@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from models import (
     DevelopmentStage,
     Perspective,
+    Layer,
     Priority,
     Prompt,
     FileAnalysis,
@@ -41,6 +42,14 @@ class TestEnums(unittest.TestCase):
         self.assertLess(Priority.MEDIUM.value, Priority.LOW.value)
         self.assertLess(Priority.LOW.value, Priority.INFO.value)
 
+    def test_layers(self):
+        self.assertEqual(len(Layer), 4)
+        values = [l.value for l in Layer]
+        self.assertIn("ui", values)
+        self.assertIn("client", values)
+        self.assertIn("service", values)
+        self.assertIn("cross_layer", values)
+
 
 class TestPromptDataclass(unittest.TestCase):
 
@@ -57,6 +66,15 @@ class TestPromptDataclass(unittest.TestCase):
         self.assertIsNone(p.line_number)
         self.assertEqual(p.acceptance_criteria, [])
         self.assertEqual(p.tags, [])
+        self.assertIsNone(p.layer)
+        self.assertIsNone(p.ui_details)
+        self.assertIsNone(p.client_details)
+        self.assertIsNone(p.service_details)
+        self.assertIsNone(p.boundary_details)
+        self.assertIsNone(p.affected_view)
+        self.assertIsNone(p.route)
+        self.assertIsNone(p.contract)
+        self.assertIsNone(p.state_transition)
 
     def test_prompt_creation_full(self):
         p = Prompt(
@@ -71,6 +89,15 @@ class TestPromptDataclass(unittest.TestCase):
             evaluative_evidence="High cyclomatic complexity",
             directive_evidence="Extract logic",
             expected_next_state="Complexity is <= 10.0",
+            layer=Layer.UI,
+            ui_details="Some UI issue",
+            client_details="Some client logic",
+            service_details="Some backend logic",
+            boundary_details="Some mismatch",
+            affected_view="User Profile",
+            route="/api/users",
+            contract="UserDTO",
+            state_transition="Loading -> Error",
             acceptance_criteria=["Reduce complexity"],
             tags=["refactoring"],
         )
@@ -80,6 +107,15 @@ class TestPromptDataclass(unittest.TestCase):
         self.assertEqual(p.evaluative_evidence, "High cyclomatic complexity")
         self.assertEqual(p.directive_evidence, "Extract logic")
         self.assertEqual(p.expected_next_state, "Complexity is <= 10.0")
+        self.assertEqual(p.layer, Layer.UI)
+        self.assertEqual(p.ui_details, "Some UI issue")
+        self.assertEqual(p.client_details, "Some client logic")
+        self.assertEqual(p.service_details, "Some backend logic")
+        self.assertEqual(p.boundary_details, "Some mismatch")
+        self.assertEqual(p.affected_view, "User Profile")
+        self.assertEqual(p.route, "/api/users")
+        self.assertEqual(p.contract, "UserDTO")
+        self.assertEqual(p.state_transition, "Loading -> Error")
         self.assertIn("Reduce complexity", p.acceptance_criteria)
 
 
