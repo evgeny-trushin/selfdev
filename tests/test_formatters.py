@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from models import OrganismState, Perspective, Priority, Prompt
+from models import OrganismState, Perspective, Priority, Prompt, Layer
 from formatters import PromptFormatter
 
 
@@ -170,6 +170,48 @@ class TestPromptFormatter(unittest.TestCase):
         self.assertIn("Directive Evidence: Fix the bug", output)
         self.assertIn("Expected Next State: No bugs found", output)
 
+
+
+    def test_format_prompt_layer_fields(self):
+        formatter = PromptFormatter()
+        p = Prompt(
+            perspective=Perspective.USER,
+            priority=Priority.HIGH,
+            title="UI Layer Test",
+            description="Testing layer fields",
+            layer=Layer.UI,
+            ui_details="Button is misaligned",
+            affected_view="Settings Page",
+            state_transition="Click to saving",
+            client_details="Failed to send request",
+            service_details="API expects json",
+            route="/api/settings",
+            contract="SettingsUpdateDTO",
+            boundary_details="Field name mismatch"
+        )
+        output = formatter.format_prompt(p)
+        self.assertIn("Layer: ui", output)
+        self.assertIn("UI Details: Button is misaligned", output)
+        self.assertIn("Affected View: Settings Page", output)
+        self.assertIn("State Transition: Click to saving", output)
+        self.assertIn("Client Details: Failed to send request", output)
+        self.assertIn("Service Details: API expects json", output)
+        self.assertIn("Route: /api/settings", output)
+        self.assertIn("Contract: SettingsUpdateDTO", output)
+        self.assertIn("Boundary Details: Field name mismatch", output)
+
+    def test_format_prompt_cross_layer_note(self):
+        formatter = PromptFormatter()
+        p = Prompt(
+            perspective=Perspective.SYSTEM,
+            priority=Priority.HIGH,
+            title="Cross Layer Test",
+            description="Testing cross layer",
+            layer=Layer.CROSS_LAYER
+        )
+        output = formatter.format_prompt(p)
+        self.assertIn("Layer: cross_layer", output)
+        self.assertIn("Note: Cross-layer issues are not considered complete until both caller and callee behavior are verified", output)
 
     def test_format_summary_empty_prompts(self):
         """Summary with no prompts should still render."""

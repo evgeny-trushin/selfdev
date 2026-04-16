@@ -79,6 +79,12 @@ class Priority(Enum):
     INFO = 5
 
 
+class Layer(Enum):
+    UI = "ui"
+    CLIENT = "client"
+    SERVICE = "service"
+    CROSS_LAYER = "cross_layer"
+
 # ==================== Data Classes ====================
 
 @dataclass
@@ -98,6 +104,15 @@ class Prompt:
     acceptance_criteria: List[str] = field(default_factory=list)
     tags: List[str] = field(default_factory=list)
     reason: str = ""
+    layer: Optional[Layer] = None
+    ui_details: Optional[str] = None
+    client_details: Optional[str] = None
+    service_details: Optional[str] = None
+    boundary_details: Optional[str] = None
+    affected_view: Optional[str] = None
+    route: Optional[str] = None
+    contract: Optional[str] = None
+    state_transition: Optional[str] = None
 
 
 @dataclass
