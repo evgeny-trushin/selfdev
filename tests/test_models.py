@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from models import (
     DevelopmentStage,
     Perspective,
+    Layer,
     Priority,
     Prompt,
     FileAnalysis,
@@ -42,6 +43,13 @@ class TestEnums(unittest.TestCase):
         self.assertLess(Priority.LOW.value, Priority.INFO.value)
 
 
+    def test_layer_enum(self):
+        self.assertEqual(Layer.UI.value, "ui")
+        self.assertEqual(Layer.CLIENT.value, "client")
+        self.assertEqual(Layer.SERVICE.value, "service")
+        self.assertEqual(Layer.CROSS_LAYER.value, "cross_layer")
+
+
 class TestPromptDataclass(unittest.TestCase):
 
     def test_prompt_creation_minimal(self):
@@ -57,6 +65,11 @@ class TestPromptDataclass(unittest.TestCase):
         self.assertIsNone(p.line_number)
         self.assertEqual(p.acceptance_criteria, [])
         self.assertEqual(p.tags, [])
+        self.assertIsNone(p.layer)
+        self.assertIsNone(p.ui_details)
+        self.assertIsNone(p.client_details)
+        self.assertIsNone(p.service_details)
+        self.assertIsNone(p.boundary_details)
 
     def test_prompt_creation_full(self):
         p = Prompt(
@@ -73,6 +86,15 @@ class TestPromptDataclass(unittest.TestCase):
             expected_next_state="Complexity is <= 10.0",
             acceptance_criteria=["Reduce complexity"],
             tags=["refactoring"],
+            layer=Layer.UI,
+            ui_details="button layout",
+            client_details="fetch state",
+            service_details="api contract",
+            boundary_details="schema mismatch",
+            affected_view="dashboard",
+            route="/api/data",
+            contract="DataSchema",
+            state_transition="idle to loading"
         )
         self.assertEqual(p.file_path, "src/module.py")
         self.assertEqual(p.line_number, 42)
@@ -81,6 +103,15 @@ class TestPromptDataclass(unittest.TestCase):
         self.assertEqual(p.directive_evidence, "Extract logic")
         self.assertEqual(p.expected_next_state, "Complexity is <= 10.0")
         self.assertIn("Reduce complexity", p.acceptance_criteria)
+        self.assertEqual(p.layer, Layer.UI)
+        self.assertEqual(p.ui_details, "button layout")
+        self.assertEqual(p.client_details, "fetch state")
+        self.assertEqual(p.service_details, "api contract")
+        self.assertEqual(p.boundary_details, "schema mismatch")
+        self.assertEqual(p.affected_view, "dashboard")
+        self.assertEqual(p.route, "/api/data")
+        self.assertEqual(p.contract, "DataSchema")
+        self.assertEqual(p.state_transition, "idle to loading")
 
 
 class TestFileAnalysis(unittest.TestCase):

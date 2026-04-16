@@ -67,6 +67,30 @@ class PromptFormatter:
             for criterion in prompt.acceptance_criteria:
                 lines.append(f"    - {criterion}")
 
+        if prompt.layer:
+            lines.append(f"  Layer: {prompt.layer.value}")
+            if prompt.ui_details:
+                lines.append(f"  UI Details: {prompt.ui_details}")
+            if prompt.affected_view:
+                lines.append(f"  Affected View: {prompt.affected_view}")
+            if prompt.state_transition:
+                lines.append(f"  State Transition: {prompt.state_transition}")
+            if prompt.client_details:
+                lines.append(f"  Client Details: {prompt.client_details}")
+            if prompt.service_details:
+                lines.append(f"  Service Details: {prompt.service_details}")
+            if prompt.route:
+                lines.append(f"  Route: {prompt.route}")
+            if prompt.contract:
+                lines.append(f"  Contract: {prompt.contract}")
+            if prompt.boundary_details:
+                lines.append(f"  Boundary Details: {prompt.boundary_details}")
+
+        # Using string representation just in case Layer enum isn't imported here
+        if prompt.layer and prompt.layer.name == "CROSS_LAYER":
+            if "Cross-layer issues are not considered complete until both caller and callee behavior are verified" not in "\n".join(lines):
+                 lines.append("  Note: Cross-layer issues are not considered complete until both caller and callee behavior are verified")
+
         return "\n".join(lines)
 
     def format_header(self, perspective: Perspective, fitness: float, state: OrganismState) -> str:
