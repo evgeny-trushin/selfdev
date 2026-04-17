@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from models import OrganismState, Perspective, Priority, Prompt
+from models import OrganismState, Perspective, Priority, Prompt, Layer
 from formatters import PromptFormatter
 
 
@@ -169,6 +169,24 @@ class TestPromptFormatter(unittest.TestCase):
         self.assertIn("Evaluative Evidence: Found a bug", output)
         self.assertIn("Directive Evidence: Fix the bug", output)
         self.assertIn("Expected Next State: No bugs found", output)
+
+    def test_format_prompt_layer_fields(self):
+        formatter = PromptFormatter()
+        p = Prompt(
+            perspective=Perspective.USER,
+            priority=Priority.MEDIUM,
+            title="Layer UI prompt",
+            description="Fix layout",
+            layer=Layer.UI,
+            affected_view="home_page",
+            state_transition="empty -> loaded",
+            ui_details="Sidebar overlapping"
+        )
+        output = formatter.format_prompt(p)
+        self.assertIn("Layer: ui", output)
+        self.assertIn("Affected View: home_page", output)
+        self.assertIn("State Transition: empty -> loaded", output)
+        self.assertIn("UI Details: Sidebar overlapping", output)
 
 
     def test_format_summary_empty_prompts(self):
