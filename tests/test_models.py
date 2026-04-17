@@ -15,6 +15,7 @@ from models import (
     Prompt,
     FileAnalysis,
     OrganismState,
+    Layer,
 )
 
 
@@ -40,6 +41,12 @@ class TestEnums(unittest.TestCase):
         self.assertLess(Priority.HIGH.value, Priority.MEDIUM.value)
         self.assertLess(Priority.MEDIUM.value, Priority.LOW.value)
         self.assertLess(Priority.LOW.value, Priority.INFO.value)
+
+    def test_layer_values(self):
+        self.assertEqual(Layer.UI.value, "ui")
+        self.assertEqual(Layer.CLIENT.value, "client")
+        self.assertEqual(Layer.SERVICE.value, "service")
+        self.assertEqual(Layer.CROSS_LAYER.value, "cross_layer")
 
 
 class TestPromptDataclass(unittest.TestCase):
@@ -81,6 +88,36 @@ class TestPromptDataclass(unittest.TestCase):
         self.assertEqual(p.directive_evidence, "Extract logic")
         self.assertEqual(p.expected_next_state, "Complexity is <= 10.0")
         self.assertIn("Reduce complexity", p.acceptance_criteria)
+
+    def test_prompt_layer_fields(self):
+        p = Prompt(
+            perspective=Perspective.USER,
+            priority=Priority.HIGH,
+            title="Layer test",
+            description="Testing layer fields",
+            layer=Layer.UI,
+            ui_details="Broken layout",
+            affected_view="login_page",
+            state_transition="empty -> loading"
+        )
+        self.assertEqual(p.layer, Layer.UI)
+        self.assertEqual(p.ui_details, "Broken layout")
+        self.assertEqual(p.affected_view, "login_page")
+        self.assertEqual(p.state_transition, "empty -> loading")
+        self.assertIsNone(p.route)
+
+    def test_prompt_cross_layer_criteria(self):
+        p = Prompt(
+            perspective=Perspective.SYSTEM,
+            priority=Priority.CRITICAL,
+            title="Cross layer test",
+            description="Testing cross layer behavior",
+            layer=Layer.CROSS_LAYER,
+            acceptance_criteria=["Existing rule"]
+        )
+        self.assertEqual(p.layer, Layer.CROSS_LAYER)
+        self.assertIn("Verify both caller and callee behavior", p.acceptance_criteria)
+        self.assertIn("Existing rule", p.acceptance_criteria)
 
 
 class TestFileAnalysis(unittest.TestCase):

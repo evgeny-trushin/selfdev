@@ -51,6 +51,26 @@ class PromptFormatter:
         if prompt.metric_current is not None and prompt.metric_target is not None:
             lines.append(f"  Current: {prompt.metric_current:.1f} -> Target: {prompt.metric_target:.1f}")
 
+        # Layer information
+        if getattr(prompt, "layer", None):
+            lines.append(f"  Layer: {prompt.layer.value}")
+        if getattr(prompt, "affected_view", None):
+            lines.append(f"  Affected View: {prompt.affected_view}")
+        if getattr(prompt, "route", None):
+            lines.append(f"  Route: {prompt.route}")
+        if getattr(prompt, "contract", None):
+            lines.append(f"  Contract: {prompt.contract}")
+        if getattr(prompt, "state_transition", None):
+            lines.append(f"  State Transition: {prompt.state_transition}")
+        if getattr(prompt, "ui_details", None):
+            lines.append(f"  UI Details: {prompt.ui_details}")
+        if getattr(prompt, "client_details", None):
+            lines.append(f"  Client Details: {prompt.client_details}")
+        if getattr(prompt, "service_details", None):
+            lines.append(f"  Service Details: {prompt.service_details}")
+        if getattr(prompt, "boundary_details", None):
+            lines.append(f"  Boundary Details: {prompt.boundary_details}")
+
         # Transparency: why this prompt was generated (principle M3)
         if prompt.reason:
             lines.append(f"  Reason: {prompt.reason}")
