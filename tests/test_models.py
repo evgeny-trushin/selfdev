@@ -12,6 +12,7 @@ from models import (
     DevelopmentStage,
     Perspective,
     Priority,
+    Layer,
     Prompt,
     FileAnalysis,
     OrganismState,
@@ -40,6 +41,14 @@ class TestEnums(unittest.TestCase):
         self.assertLess(Priority.HIGH.value, Priority.MEDIUM.value)
         self.assertLess(Priority.MEDIUM.value, Priority.LOW.value)
         self.assertLess(Priority.LOW.value, Priority.INFO.value)
+
+    def test_layers(self):
+        self.assertEqual(len(Layer), 4)
+        values = [l.value for l in Layer]
+        self.assertIn("ui", values)
+        self.assertIn("client", values)
+        self.assertIn("service", values)
+        self.assertIn("cross_layer", values)
 
 
 class TestPromptDataclass(unittest.TestCase):
@@ -81,6 +90,28 @@ class TestPromptDataclass(unittest.TestCase):
         self.assertEqual(p.directive_evidence, "Extract logic")
         self.assertEqual(p.expected_next_state, "Complexity is <= 10.0")
         self.assertIn("Reduce complexity", p.acceptance_criteria)
+
+    def test_prompt_creation_layered(self):
+        p = Prompt(
+            perspective=Perspective.USER,
+            priority=Priority.MEDIUM,
+            title="Layered UI",
+            description="Test UI layer",
+            layer=Layer.UI,
+            ui_details="Some details"
+        )
+        self.assertEqual(p.layer, Layer.UI)
+        self.assertEqual(p.ui_details, "Some details")
+
+    def test_prompt_cross_layer_acceptance_criteria(self):
+        p = Prompt(
+            perspective=Perspective.SYSTEM,
+            priority=Priority.HIGH,
+            title="Cross layer test",
+            description="Test cross layer criterion",
+            layer=Layer.CROSS_LAYER
+        )
+        self.assertIn("Verify both caller and callee behavior", p.acceptance_criteria)
 
 
 class TestFileAnalysis(unittest.TestCase):
