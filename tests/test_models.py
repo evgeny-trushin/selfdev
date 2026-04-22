@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from models import (
     DevelopmentStage,
+    Layer,
     Perspective,
     Priority,
     Prompt,
@@ -19,6 +20,15 @@ from models import (
 
 
 class TestEnums(unittest.TestCase):
+
+    def test_layers(self):
+        self.assertEqual(len(Layer), 4)
+        values = [l.value for l in Layer]
+        self.assertIn("ui", values)
+        self.assertIn("client", values)
+        self.assertIn("service", values)
+        self.assertIn("cross_layer", values)
+
 
     def test_development_stages(self):
         self.assertEqual(DevelopmentStage.EMBRYONIC.value, "embryonic")
@@ -81,6 +91,33 @@ class TestPromptDataclass(unittest.TestCase):
         self.assertEqual(p.directive_evidence, "Extract logic")
         self.assertEqual(p.expected_next_state, "Complexity is <= 10.0")
         self.assertIn("Reduce complexity", p.acceptance_criteria)
+
+    def test_prompt_layer_fields(self):
+        p = Prompt(
+            perspective=Perspective.USER,
+            priority=Priority.MEDIUM,
+            title="Layer test",
+            description="Testing layer fields",
+            layer=Layer.UI,
+            ui_details="Button is misaligned",
+            affected_view="LoginScreen",
+            state_transition="Loading -> Error"
+        )
+        self.assertEqual(p.layer, Layer.UI)
+        self.assertEqual(p.ui_details, "Button is misaligned")
+        self.assertEqual(p.affected_view, "LoginScreen")
+        self.assertEqual(p.state_transition, "Loading -> Error")
+        self.assertIsNone(p.client_details)
+
+    def test_prompt_cross_layer_post_init(self):
+        p = Prompt(
+            perspective=Perspective.SYSTEM,
+            priority=Priority.HIGH,
+            title="Cross layer test",
+            description="Testing __post_init__ behavior",
+            layer=Layer.CROSS_LAYER
+        )
+        self.assertIn("Verify both caller and callee behavior", p.acceptance_criteria)
 
 
 class TestFileAnalysis(unittest.TestCase):
