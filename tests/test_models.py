@@ -15,10 +15,18 @@ from models import (
     Prompt,
     FileAnalysis,
     OrganismState,
+    Layer,
 )
 
 
 class TestEnums(unittest.TestCase):
+
+    def test_layer_enum(self):
+        self.assertEqual(Layer.UI.value, "ui")
+        self.assertEqual(Layer.CLIENT.value, "client")
+        self.assertEqual(Layer.SERVICE.value, "service")
+        self.assertEqual(Layer.CROSS_LAYER.value, "cross_layer")
+
 
     def test_development_stages(self):
         self.assertEqual(DevelopmentStage.EMBRYONIC.value, "embryonic")
@@ -44,6 +52,17 @@ class TestEnums(unittest.TestCase):
 
 class TestPromptDataclass(unittest.TestCase):
 
+    def test_cross_layer_prompt(self):
+        p = Prompt(
+            perspective=Perspective.USER,
+            priority=Priority.HIGH,
+            title="Test cross layer",
+            description="A test description",
+            layer=Layer.CROSS_LAYER
+        )
+        self.assertIn("Verify both caller and callee behavior", p.acceptance_criteria)
+
+
     def test_prompt_creation_minimal(self):
         p = Prompt(
             perspective=Perspective.USER,
@@ -57,6 +76,15 @@ class TestPromptDataclass(unittest.TestCase):
         self.assertIsNone(p.line_number)
         self.assertEqual(p.acceptance_criteria, [])
         self.assertEqual(p.tags, [])
+        self.assertIsNone(p.layer)
+        self.assertIsNone(p.ui_details)
+        self.assertIsNone(p.client_details)
+        self.assertIsNone(p.service_details)
+        self.assertIsNone(p.boundary_details)
+        self.assertIsNone(p.affected_view)
+        self.assertIsNone(p.route)
+        self.assertIsNone(p.contract)
+        self.assertIsNone(p.state_transition)
 
     def test_prompt_creation_full(self):
         p = Prompt(
