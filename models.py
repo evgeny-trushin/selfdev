@@ -71,6 +71,14 @@ class Perspective(Enum):
 
 
 
+
+class Layer(Enum):
+    UI = "ui"
+    CLIENT = "client"
+    SERVICE = "service"
+    CROSS_LAYER = "cross_layer"
+
+
 class Priority(Enum):
     CRITICAL = 1
     HIGH = 2
@@ -98,6 +106,20 @@ class Prompt:
     acceptance_criteria: List[str] = field(default_factory=list)
     tags: List[str] = field(default_factory=list)
     reason: str = ""
+    layer: Optional[Layer] = None
+    ui_details: Optional[str] = None
+    client_details: Optional[str] = None
+    service_details: Optional[str] = None
+    boundary_details: Optional[str] = None
+    affected_view: Optional[str] = None
+    route: Optional[str] = None
+    contract: Optional[str] = None
+    state_transition: Optional[str] = None
+
+    def __post_init__(self):
+        if self.layer == Layer.CROSS_LAYER:
+            if "Verify both caller and callee behavior" not in self.acceptance_criteria:
+                self.acceptance_criteria.append("Verify both caller and callee behavior")
 
 
 @dataclass
