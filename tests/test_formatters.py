@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from models import OrganismState, Perspective, Priority, Prompt
+from models import OrganismState, Perspective, Priority, Prompt, Layer
 from formatters import PromptFormatter
 
 
@@ -130,6 +130,24 @@ class TestPromptFormatter(unittest.TestCase):
         output = formatter.format_summary(state, prompts)
         self.assertIn("Total Prompts: 0", output)
         self.assertIn("Overall Fitness: 100.00%", output)
+
+    def test_format_prompt_layer_fields(self):
+        formatter = PromptFormatter()
+        p = Prompt(
+            perspective=Perspective.SYSTEM,
+            priority=Priority.MEDIUM,
+            title="Layer test",
+            description="desc",
+            layer=Layer.UI,
+            ui_details="Some UI details",
+            affected_view="View 1",
+            state_transition="State 1 to State 2",
+        )
+        output = formatter.format_prompt(p)
+        self.assertIn("Layer: ui", output)
+        self.assertIn("UI Details: Some UI details", output)
+        self.assertIn("Affected View: View 1", output)
+        self.assertIn("State Transition: State 1 to State 2", output)
 
     def test_format_prompt_all_fields(self):
         formatter = PromptFormatter()

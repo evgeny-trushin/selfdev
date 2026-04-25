@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from models import (
     DevelopmentStage,
     Perspective,
+    Layer,
     Priority,
     Prompt,
     FileAnalysis,
@@ -57,6 +58,16 @@ class TestPromptDataclass(unittest.TestCase):
         self.assertIsNone(p.line_number)
         self.assertEqual(p.acceptance_criteria, [])
         self.assertEqual(p.tags, [])
+
+    def test_prompt_cross_layer_post_init(self):
+        p = Prompt(
+            perspective=Perspective.SYSTEM,
+            priority=Priority.CRITICAL,
+            title="Refactor module",
+            description="Module too complex",
+            layer=Layer.CROSS_LAYER
+        )
+        self.assertIn("Verify both caller and callee behavior", p.acceptance_criteria)
 
     def test_prompt_creation_full(self):
         p = Prompt(
