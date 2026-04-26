@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from models import (
     DevelopmentStage,
+    Layer,
     Perspective,
     Priority,
     Prompt,
@@ -40,6 +41,14 @@ class TestEnums(unittest.TestCase):
         self.assertLess(Priority.HIGH.value, Priority.MEDIUM.value)
         self.assertLess(Priority.MEDIUM.value, Priority.LOW.value)
         self.assertLess(Priority.LOW.value, Priority.INFO.value)
+
+    def test_layer_enum(self):
+        self.assertEqual(len(Layer), 4)
+        values = [l.value for l in Layer]
+        self.assertIn("ui", values)
+        self.assertIn("client", values)
+        self.assertIn("service", values)
+        self.assertIn("cross_layer", values)
 
 
 class TestPromptDataclass(unittest.TestCase):
@@ -81,6 +90,33 @@ class TestPromptDataclass(unittest.TestCase):
         self.assertEqual(p.directive_evidence, "Extract logic")
         self.assertEqual(p.expected_next_state, "Complexity is <= 10.0")
         self.assertIn("Reduce complexity", p.acceptance_criteria)
+
+    def test_prompt_layer_fields(self):
+        p = Prompt(
+            perspective=Perspective.SYSTEM,
+            priority=Priority.HIGH,
+            title="UI Issue",
+            description="Button broken",
+            layer=Layer.UI,
+            ui_details="Button is green instead of blue",
+            affected_view="LoginScreen",
+            state_transition="Clicking button should open modal"
+        )
+        self.assertEqual(p.layer, Layer.UI)
+        self.assertEqual(p.ui_details, "Button is green instead of blue")
+        self.assertEqual(p.affected_view, "LoginScreen")
+        self.assertEqual(p.state_transition, "Clicking button should open modal")
+        self.assertIsNone(p.client_details)
+
+    def test_prompt_cross_layer(self):
+        p = Prompt(
+            perspective=Perspective.SYSTEM,
+            priority=Priority.HIGH,
+            title="Integration Issue",
+            description="API mismatch",
+            layer=Layer.CROSS_LAYER
+        )
+        self.assertIn("Verify both caller and callee behavior", p.acceptance_criteria)
 
 
 class TestFileAnalysis(unittest.TestCase):
