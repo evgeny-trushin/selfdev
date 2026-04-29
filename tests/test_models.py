@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from models import (
     DevelopmentStage,
+    Layer,
     Perspective,
     Priority,
     Prompt,
@@ -25,6 +26,15 @@ class TestEnums(unittest.TestCase):
         self.assertEqual(DevelopmentStage.GROWTH.value, "growth")
         self.assertEqual(DevelopmentStage.MATURATION.value, "maturation")
         self.assertEqual(DevelopmentStage.HOMEOSTASIS.value, "homeostasis")
+
+
+    def test_layers(self):
+        self.assertEqual(len(Layer), 4)
+        values = [l.value for l in Layer]
+        self.assertIn("ui", values)
+        self.assertIn("client", values)
+        self.assertIn("service", values)
+        self.assertIn("cross_layer", values)
 
     def test_perspectives(self):
         self.assertEqual(len(Perspective), 5)
@@ -82,6 +92,37 @@ class TestPromptDataclass(unittest.TestCase):
         self.assertEqual(p.expected_next_state, "Complexity is <= 10.0")
         self.assertIn("Reduce complexity", p.acceptance_criteria)
 
+
+
+    def test_prompt_cross_layer(self):
+        p = Prompt(
+            perspective=Perspective.USER,
+            priority=Priority.HIGH,
+            title="Cross layer issue",
+            description="Fix issue",
+            layer=Layer.CROSS_LAYER,
+            acceptance_criteria=["Initial criteria"]
+        )
+        self.assertEqual(p.layer, Layer.CROSS_LAYER)
+        self.assertIn("Initial criteria", p.acceptance_criteria)
+        self.assertIn("Verify both caller and callee behavior", p.acceptance_criteria)
+
+    def test_prompt_ui_layer(self):
+        p = Prompt(
+            perspective=Perspective.USER,
+            priority=Priority.MEDIUM,
+            title="UI issue",
+            description="Fix button",
+            layer=Layer.UI,
+            ui_details="Button is misaligned",
+            affected_view="LoginScreen",
+            state_transition="Login button changes to loading state"
+        )
+        self.assertEqual(p.layer, Layer.UI)
+        self.assertEqual(p.ui_details, "Button is misaligned")
+        self.assertEqual(p.affected_view, "LoginScreen")
+        self.assertEqual(p.state_transition, "Login button changes to loading state")
+        self.assertNotIn("Verify both caller and callee behavior", p.acceptance_criteria)
 
 class TestFileAnalysis(unittest.TestCase):
 
