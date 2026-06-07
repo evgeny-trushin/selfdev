@@ -29,6 +29,22 @@ Selfdev now ships with four specialized [VS Code agents](https://github.com/evge
 
 ## Use Cases
 
+### TypeScript RED
+
+[![TypeScript RED — learning specialisations, offline exercises, and topic counts](https://selfdev.trushin.vip/img/typescript-red-categories.webp)](https://typescript.red/)
+[![TypeScript RED — active specialisations, mastery status, and next-topic actions](https://selfdev.trushin.vip/img/typescript-red-continue.webp)](https://typescript.red/)
+[![TypeScript RED — live TypeScript editor with console output and assertion diff history](https://selfdev.trushin.vip/img/typescript-red-console.webp)](https://typescript.red/)
+
+**Selfdev pipeline self-reconfigured to generate learning content.** TypeScript RED is the public proof case: the same repo-native workflow that coordinates agents now creates TypeScript exercise artifacts, challenges them with gates and diagnostics, keeps the review trail visible, and ships the accepted output as a static learning site.
+
+- **Review gates** reject weak generated work before learners see it.
+- **Real compiler evidence** feeds TypeScript diagnostics back into tasks.
+- **Cached LLM orchestration** validates schemas, retries, and logs audits.
+- **Human pipeline review** surfaces queue state, evidence, and next commands.
+- **Static-first output** ships rich validated content as simple files.
+
+🔗 **[typescript.red](https://typescript.red/)**
+
 ### Wash My Car
 
 [![Wash My Car — Best day spotlight with score, weather breakdown, and recommended wash window](https://selfdev.trushin.vip/img/wash-my-car-1.webp)](https://wash-my-car.trushin.vip/)
