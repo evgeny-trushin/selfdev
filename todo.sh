@@ -1,15 +1,17 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Self-Development System
 # Analyzes codebase state and generates prompts from multiple perspectives
 #
 # Usage:
-#   ./develop.sh           # Run all perspectives
-#   ./develop.sh --user    # User perspective: features, UX, documentation
-#   ./develop.sh --test    # Test perspective: coverage, robustness
-#   ./develop.sh --system  # System perspective: architecture, complexity
-#   ./develop.sh --analytics # Analytics perspective: trends, patterns
-#   ./develop.sh --debug   # Debug perspective: issues, TODOs
+#   ./todo.sh             # Show current TODO increment, or verify it if repeated
+#   ./todo.sh --all       # Run all perspectives
+#   ./todo.sh --user      # User perspective: features, UX, documentation
+#   ./todo.sh --test      # Test perspective: coverage, robustness
+#   ./todo.sh --system    # System perspective: architecture, complexity
+#   ./todo.sh --analytics # Analytics perspective: trends, patterns
+#   ./todo.sh --debug     # Debug perspective: issues, TODOs
+#   ./plan.sh             # Generate a structured implementation plan prompt
 
 #
 # Additional options:
@@ -18,12 +20,12 @@
 #   --revert=N  Revert increment N using git history
 #   --revert_from=N  Revert from increment N to current todo
 #   --redo=N    Revert and re-implement increment N
-#   --selfdev   Analyze the selfdev system itself
+#   --selfdev   Force this checkout as the analysis root
 #   --root DIR  Analyze a specific directory
 #   --help      Show this help message
 #
 
-set -e
+set -euo pipefail
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -63,22 +65,22 @@ show_help() {
     echo ""
 
     echo "Options:"
-    echo "  --all        Run all perspectives (default if no perspective specified)"
+    echo "  --all        Run all perspectives"
     echo "  --state      Show current organism state"
     echo "  --advance    Advance to next generation after analysis"
     echo "  --revert=N   Generate prompt to revert increment N using git history"
     echo "  --revert_from=N  Revert from increment N to current todo using git history"
     echo "  --redo=N     Revert increment N and generate prompt to re-implement it"
-    echo "  --selfdev    Analyze the selfdev system itself (instead of the project)"
+    echo "  --selfdev    Force this checkout as the analysis root"
     echo "  --root DIR   Analyze a specific directory"
     echo "  --help       Show this help message"
     echo ""
     echo "Examples:"
-    echo "  $(basename "$0")               # Run all perspectives"
+    echo "  $(basename "$0")               # Show current TODO increment"
     echo "  $(basename "$0") --user --test # Run user and test perspectives"
     echo "  $(basename "$0") --debug       # Only debug perspective"
     echo "  $(basename "$0") --state       # Show current state"
-    echo "  $(basename "$0") --selfdev     # Analyze the selfdev system itself"
+    echo "  $(basename "$0") --selfdev     # Force this checkout as root"
     echo "  $(basename "$0") --root /path  # Analyze a specific project"
     echo "  $(basename "$0") --revert=0001 # Revert increment 0001"
     echo "  $(basename "$0") --revert_from=0020  # Revert from 0020 to current"
@@ -89,13 +91,15 @@ show_help() {
     echo "  - Principles injected from how/"
     echo "  - Current codebase state"
     echo "  - Evolutionary history (stored in organism_state.json)"
+    echo "  - Default root: ../todo first, then ./todo"
     echo ""
     echo "Increment-driven workflow:"
-    echo "  1. Run ./develop.sh           \u2192 see current TODO increment"
+    echo "  1. Run ./todo.sh              -> see current TODO increment"
     echo "  2. Implement the requirement"
-    echo "  3. git add -A && git commit -m \"INCREMENT XXXX: desc\" && git push"
-    echo "  4. Run ./develop.sh           → verify done, see next increment"
-    echo "  5. Repeat from step 2"
+    echo "  3. Run tests: python -m pytest tests/"
+    echo "  4. git add -A && git commit -m \"increment XXXX: desc\" && git push"
+    echo "  5. Run ./todo.sh              -> verify done, see next increment"
+    echo "  6. Repeat from step 2"
     echo ""
 }
 
@@ -111,9 +115,9 @@ check_python() {
     fi
 
     # Check Python version
-    PYTHON_VERSION=$($PYTHON_CMD -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
-    PYTHON_MAJOR=$($PYTHON_CMD -c 'import sys; print(sys.version_info.major)')
-    PYTHON_MINOR=$($PYTHON_CMD -c 'import sys; print(sys.version_info.minor)')
+    PYTHON_VERSION=$("$PYTHON_CMD" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+    PYTHON_MAJOR=$("$PYTHON_CMD" -c 'import sys; print(sys.version_info.major)')
+    PYTHON_MINOR=$("$PYTHON_CMD" -c 'import sys; print(sys.version_info.minor)')
 
     if [ "$PYTHON_MAJOR" -lt 3 ] || { [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -lt 8 ]; }; then
         echo "Warning: Python 3.8+ recommended. Found Python ${PYTHON_VERSION}"
@@ -126,6 +130,17 @@ check_script() {
         echo "Error: organism.py not found at ${PYTHON_SCRIPT}"
         echo "Please ensure the Self-Development System is properly installed."
         exit 1
+    fi
+}
+
+default_root() {
+    local parent_root
+    parent_root="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+    if [ -d "${parent_root}/todo" ]; then
+        echo "$parent_root"
+    else
+        echo "$SCRIPT_DIR"
     fi
 }
 
@@ -146,8 +161,22 @@ main() {
     # Show banner
     show_banner
 
-    # Pass all arguments to Python script
-    $PYTHON_CMD "$PYTHON_SCRIPT" "$@"
+    local explicit_root=0
+    for arg in "$@"; do
+        case "$arg" in
+            --selfdev|--root|--root=*)
+                explicit_root=1
+                ;;
+        esac
+    done
+
+    local organism_args=("$@")
+    if [ "$explicit_root" -eq 0 ]; then
+        organism_args=(--root "$(default_root)" "$@")
+    fi
+
+    # Pass all arguments to Python script, preferring ../todo before ./todo.
+    "$PYTHON_CMD" "$PYTHON_SCRIPT" "${organism_args[@]}"
 
     # Capture exit code
     EXIT_CODE=$?
@@ -161,14 +190,14 @@ main() {
         echo "║  INCREMENT WORKFLOW:                                                 ║"
         echo "║                                                                      ║"
         echo "║  1. Implement the increment requirement above                        ║"
-        echo "║  2. Run tests:  python -m pytest selfdev/tests/                      ║"
+        echo "║  2. Run tests:  python -m pytest tests/                              ║"
         echo "║  3. Run linter: python -m py_compile <changed files>                 ║"
         echo "║  4. List changed files in your commit body                           ║"
         echo "║  5. Commit with the suggested message above                          ║"
-        echo "║  6. Run ./develop.sh  (verify & get next increment)                  ║"
+        echo "║  6. Run ./todo.sh  (verify & get next increment)                     ║"
         echo "║                                                                      ║"
         echo "║  RULES:                                                              ║"
-        echo "║  • Do NOT auto-advance by rerunning develop.sh prematurely           ║"
+        echo "║  • Do NOT auto-advance by rerunning todo.sh prematurely              ║"
         echo "║  • Only mark done after tests pass & files are implemented           ║"
         echo "║  • Map review comments to exact diff hunks in your summary           ║"
         echo "╚══════════════════════════════════════════════════════════════════════╝"

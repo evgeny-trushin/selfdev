@@ -9,10 +9,10 @@ sub-modules: models, analyzers, perspectives, diagnostics, formatters,
 and the increment tracker.
 
 Workflow (increment-driven loop):
-  1. ./develop.sh  →  output the current TODO increment with injected principles
+  1. ./todo.sh     →  output the current TODO increment with injected principles
   2. User implements the requirement
   3. git add -A && git commit -m "INCREMENT XXXX: desc" && git push
-  4. ./develop.sh  →  verify & mark done, output next increment
+  4. ./todo.sh     →  verify & mark done, output next increment
   5. Repeat until all increments are completed
 """
 
@@ -254,7 +254,7 @@ class SelfDevelopmentOrganism:
         tests_ok, test_output = self._run_tests(self.root_dir)
         if not tests_ok:
             print("\n  ✗ CANNOT ADVANCE — tests are failing.")
-            print("    Fix the failures below before re-running develop.sh:\n")
+            print("    Fix the failures below before re-running todo.sh:\n")
             print(test_output)
             return
 

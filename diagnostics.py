@@ -44,7 +44,7 @@ class AnalyticsPerspective(PerspectiveAnalyzer):
                 expected_next_state="History array has >= 2 completed generations",
                 acceptance_criteria=[
                     "Complete at least 2 generations to build fitness history",
-                    "Run ./develop.sh after each increment to record metrics"
+                    "Run ./todo.sh after each increment to record metrics"
                 ],
                 reason="Fitness history has fewer than 2 entries"
             )]

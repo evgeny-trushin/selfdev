@@ -457,6 +457,14 @@ class TestFormatIncrementPrompt(_TrackerTestCase):
         self.assertIn("FORBIDDEN", prompt)
         self.assertIn("Do NOT auto-advance", prompt)
 
+    def test_prompt_uses_current_workflow_paths(self):
+        path = _make_increment(self.req_dir, 1)
+        prompt = self.tracker.format_increment_prompt(path)
+        self.assertIn("python -m pytest tests/", prompt)
+        self.assertIn("./todo.sh", prompt)
+        self.assertNotIn("selfdev/tests", prompt)
+        self.assertNotIn("develop.sh", prompt)
+
     def test_prompt_falls_back_to_self_inspection(self):
         """Empty file triggers self-inspection prompt."""
         content = ""
@@ -469,7 +477,11 @@ class TestFormatIncrementPrompt(_TrackerTestCase):
         path = _make_increment(self.req_dir, 99)
         prompt = self.tracker.format_verification_prompt(path)
         self.assertIn("todo/", prompt)
+        self.assertIn("python -m pytest tests/", prompt)
+        self.assertIn("./todo.sh --advance", prompt)
         self.assertNotIn("requirements/", prompt)
+        self.assertNotIn("selfdev/tests", prompt)
+        self.assertNotIn("develop.sh", prompt)
 
 
 # -------------------------------------------------------------------
@@ -512,6 +524,10 @@ class TestSelfInspectionPrompt(_TrackerTestCase):
         prompt = self.tracker.format_self_inspection_prompt(path, data)
         self.assertIn("WORKFLOW:", prompt)
         self.assertIn("git add", prompt)
+        self.assertIn("python -m pytest tests/", prompt)
+        self.assertIn("./todo.sh", prompt)
+        self.assertNotIn("selfdev/tests", prompt)
+        self.assertNotIn("develop.sh", prompt)
 
     def test_self_inspection_commit_message(self):
         path = _make_increment(self.req_dir, 5, short_desc="my_thing",

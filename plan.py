@@ -15,6 +15,8 @@ Usage:
     python3 plan.py --all-principles   # Dump full convention guide
 """
 
+from __future__ import annotations
+
 import argparse
 import glob
 import json

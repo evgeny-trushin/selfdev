@@ -15,6 +15,12 @@ from analyzers import GitAnalyzer
 from increment_tracker import IncrementTracker
 
 
+def _assert_current_workflow(testcase: unittest.TestCase, output: str) -> None:
+    testcase.assertIn("python -m pytest tests/", output)
+    testcase.assertNotIn("python -m pytest selfdev/tests/", output)
+    testcase.assertNotIn("./develop.sh", output)
+
+
 def _make_increment_file(req_dir: Path, number: int, status: str = "todo",
                          short_desc: str = "test_feature") -> Path:
     """Create a minimal increment markdown file and return its path."""
@@ -73,6 +79,7 @@ class TestIncrementTrackerRevert(unittest.TestCase):
         self.assertIn("INCREMENT 0001", output)
         self.assertIn("git revert --no-commit", output)
         self.assertIn("REVERT INCREMENT 0001", output)
+        _assert_current_workflow(self, output)
 
     @patch.object(GitAnalyzer, "get_commits_for_increment")
     @patch.object(GitAnalyzer, "get_diff_for_commit")
@@ -86,6 +93,7 @@ class TestIncrementTrackerRevert(unittest.TestCase):
         self.assertIn("REVERT INCREMENT 0005", output)
         self.assertIn("No commits found", output)
         self.assertIn("Search manually", output)
+        _assert_current_workflow(self, output)
 
     @patch.object(GitAnalyzer, "get_commits_for_increment")
     @patch.object(GitAnalyzer, "get_diff_for_commit")
@@ -158,6 +166,7 @@ class TestIncrementTrackerRevertFrom(unittest.TestCase):
         self.assertIn("INCREMENT 0005", output)
         self.assertIn("INCREMENT 0004", output)
         self.assertIn("INCREMENT 0003", output)
+        _assert_current_workflow(self, output)
 
     @patch.object(GitAnalyzer, "get_commits_for_increment")
     def test_revert_from_lists_commits_per_increment(self, mock_commits):
@@ -237,6 +246,8 @@ class TestIncrementTrackerRedo(unittest.TestCase):
         # Workflow
         self.assertIn("WORKFLOW:", output)
         self.assertIn("(redo)", output)
+        self.assertIn("./todo.sh", output)
+        _assert_current_workflow(self, output)
 
     @patch.object(GitAnalyzer, "get_commits_for_increment")
     @patch.object(GitAnalyzer, "get_diff_for_commit")
