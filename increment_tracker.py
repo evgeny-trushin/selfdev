@@ -8,14 +8,48 @@ Manages the todo/increment_XXXX_todo_*.md ↔ done lifecycle:
      and present the next increment with injected principles.
 """
 
-import os
 import re
-import glob
 from pathlib import Path
 from typing import Optional, List, Tuple
 
 from analyzers import GitAnalyzer
 from models import TODO_DIRNAME, HOW_DIRNAME
+
+
+_INCREMENT_NUMBER_RE = re.compile(r"(?<!\d)(\d{1,4})(?!\d)")
+_INCREMENT_STATUS_RE = re.compile(
+    r"(?i)(^|[_-])(?P<status>todo|done)(?=$|[_-])"
+)
+
+
+def _increment_number_from_name(filename: str) -> Optional[int]:
+    """Return the first standalone 1-4 digit increment number."""
+    match = _INCREMENT_NUMBER_RE.search(Path(filename).stem)
+    return int(match.group(1)) if match else None
+
+
+def _increment_status_from_name(filename: str) -> Optional[str]:
+    """Return todo/done when it appears as a filename token."""
+    match = _INCREMENT_STATUS_RE.search(Path(filename).stem)
+    return match.group("status").lower() if match else None
+
+
+def _increment_short_desc_from_name(filename: str) -> str:
+    """Return the filename segment after the todo/done status token."""
+    stem = Path(filename).stem
+    match = _INCREMENT_STATUS_RE.search(stem)
+    if not match:
+        return ""
+    return stem[match.end():].strip("_-")
+
+
+def _replace_increment_status(filename: str, old: str, new: str) -> str:
+    """Replace one todo/done status token while preserving delimiters."""
+    pattern = re.compile(rf"(?i)(^|[_-]){re.escape(old)}(?=$|[_-])")
+    match = pattern.search(filename)
+    if not match:
+        return filename
+    return f"{filename[:match.start()]}{match.group(1)}{new}{filename[match.end():]}"
 
 
 class IncrementTracker:
@@ -32,9 +66,18 @@ class IncrementTracker:
 
     def _increment_files(self, status: str = "todo") -> List[Path]:
         """Return sorted list of increment files matching *status* (todo|done)."""
-        pattern = str(self.requirements_dir / f"increment_*_{status}_*.md")
-        files = sorted(glob.glob(pattern))
-        return [Path(f) for f in files]
+        wanted = status.lower()
+        files = []
+        for path in self.requirements_dir.glob("*.md"):
+            number = _increment_number_from_name(path.name)
+            if number is None:
+                continue
+            if _increment_status_from_name(path.name) == wanted:
+                files.append(path)
+        return sorted(
+            files,
+            key=lambda p: (_increment_number_from_name(p.name) or 0, p.name),
+        )
 
     def current_todo(self) -> Optional[Path]:
         """Return the first (lowest-numbered) TODO increment file, or None."""
@@ -89,15 +132,14 @@ class IncrementTracker:
         name = path.stem  # e.g. increment_0001_todo_multi_perspective_validation
 
         # Extract number
-        num_match = re.search(r'increment_(\d+)', name)
-        number = int(num_match.group(1)) if num_match else 0
+        number = _increment_number_from_name(name) or 0
 
-        # Extract status from filename
-        status = "todo" if "_todo_" in name else "done"
+        # Extract status from filename. The selfdev template uses
+        # ``_todo_``/``_done_``; project roadmaps may use other prefixes.
+        status = _increment_status_from_name(name) or "done"
 
         # Extract short description from filename
-        desc_match = re.search(r'_(?:todo|done)_(.+)$', name)
-        short_desc = desc_match.group(1) if desc_match else ""
+        short_desc = _increment_short_desc_from_name(name)
 
         # ----------------------------------------------------------
         # Pass 1: strict parsing (original patterns)
@@ -440,12 +482,12 @@ class IncrementTracker:
     # ------------------------------------------------------------------
 
     def mark_done(self, increment_path: Path) -> Path:
-        """Rename an increment file from _todo_ to _done_.
+        """Rename an increment file from todo to done.
 
         Returns the new path.
         """
         old_name = increment_path.name
-        new_name = old_name.replace("_todo_", "_done_", 1)
+        new_name = _replace_increment_status(old_name, "todo", "done")
         new_path = increment_path.parent / new_name
         increment_path.rename(new_path)
         return new_path
@@ -824,10 +866,7 @@ class IncrementTracker:
 
         # Step 5: Explicit rename instruction
         old_name = increment_path.name
-        if "-todo-" in old_name:
-            new_name = old_name.replace("-todo-", "-done-", 1)
-        else:
-            new_name = old_name.replace("_todo_", "_done_", 1)
+        new_name = _replace_increment_status(old_name, "todo", "done")
 
         lines.append("STEP 5 — RENAME (only after steps 1-4 pass):")
         lines.append("-" * 40)
@@ -867,10 +906,9 @@ class IncrementTracker:
     def _find_increment_file(self, number: int) -> Optional[Path]:
         """Find an increment file (todo or done) by its number."""
         for status in ("todo", "done"):
-            pattern = str(self.requirements_dir / f"increment_{number:04d}_{status}_*.md")
-            files = glob.glob(pattern)
-            if files:
-                return Path(files[0])
+            for path in self._increment_files(status):
+                if _increment_number_from_name(path.name) == number:
+                    return path
         return None
 
     def format_revert_prompt(self, increment_number: int) -> str:
@@ -935,11 +973,11 @@ class IncrementTracker:
             lines.append(f"  5. git push")
         lines.append("")
 
-        if inc_file and "_done_" in inc_file.name:
+        if inc_file and _increment_status_from_name(inc_file.name) == "done":
             lines.append("POST-REVERT:")
             lines.append("-" * 40)
             lines.append(f"  Rename the increment file back to todo:")
-            todo_name = inc_file.name.replace("_done_", "_todo_", 1)
+            todo_name = _replace_increment_status(inc_file.name, "done", "todo")
             lines.append(f"    mv {TODO_DIRNAME}/{inc_file.name} {TODO_DIRNAME}/{todo_name}")
             lines.append("")
 

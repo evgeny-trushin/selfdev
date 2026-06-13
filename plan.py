@@ -18,7 +18,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import glob
 import json
 import re
 import subprocess
@@ -33,6 +32,25 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 HOW_DIR = SCRIPT_DIR / "how"
 TODO_DIR = SCRIPT_DIR / "todo"
 STATE_FILE = SCRIPT_DIR / "organism_state.json"
+
+
+# ---------------------------------------------------------------------------
+# Increment filename helpers
+# ---------------------------------------------------------------------------
+_INCREMENT_NUMBER_RE = re.compile(r"(?<!\d)(\d{1,4})(?!\d)")
+_INCREMENT_STATUS_RE = re.compile(
+    r"(?i)(^|[_-])(?P<status>todo|done)(?=$|[_-])"
+)
+
+
+def _increment_number_from_name(filename: str) -> int | None:
+    match = _INCREMENT_NUMBER_RE.search(Path(filename).stem)
+    return int(match.group(1)) if match else None
+
+
+def _increment_status_from_name(filename: str) -> str | None:
+    match = _INCREMENT_STATUS_RE.search(Path(filename).stem)
+    return match.group("status").lower() if match else None
 
 
 # ---------------------------------------------------------------------------
@@ -102,8 +120,18 @@ def format_conventions(conventions: dict[str, str]) -> str:
 # ---------------------------------------------------------------------------
 
 def _increment_files(status: str = "todo") -> list[Path]:
-    pattern = str(TODO_DIR / f"increment_*_{status}_*.md")
-    return sorted(Path(f) for f in glob.glob(pattern))
+    wanted = status.lower()
+    files = []
+    for path in TODO_DIR.glob("*.md"):
+        number = _increment_number_from_name(path.name)
+        if number is None:
+            continue
+        if _increment_status_from_name(path.name) == wanted:
+            files.append(path)
+    return sorted(
+        files,
+        key=lambda p: (_increment_number_from_name(p.name) or 0, p.name),
+    )
 
 
 def current_todo() -> Path | None:
@@ -114,8 +142,7 @@ def current_todo() -> Path | None:
 def find_increment(number: int) -> Path | None:
     for status in ("todo", "done"):
         for f in _increment_files(status):
-            m = re.search(r"increment_(\d+)", f.stem)
-            if m and int(m.group(1)) == number:
+            if _increment_number_from_name(f.name) == number:
                 return f
     return None
 
@@ -124,9 +151,8 @@ def parse_increment(path: Path) -> dict:
     content = _read(path)
     name = path.stem
 
-    num_m = re.search(r"increment_(\d+)", name)
-    number = int(num_m.group(1)) if num_m else 0
-    status = "todo" if "_todo_" in name else "done"
+    number = _increment_number_from_name(name) or 0
+    status = _increment_status_from_name(name) or "done"
 
     title_m = re.search(r"^#\s+(.+)$", content, re.MULTILINE)
     title = title_m.group(1).strip() if title_m else name
