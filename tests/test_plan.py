@@ -2,6 +2,7 @@
 
 import io
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -107,6 +108,50 @@ class TokenisedPathsTests(unittest.TestCase):
         self.assertNotIn("test_increment_", out)
 
 
+class IncrementFilePatternTests(unittest.TestCase):
+    def _write_increment(self, todo_dir: Path, filename: str) -> Path:
+        path = todo_dir / filename
+        path.write_text(
+            "# Pattern Increment\n\n"
+            "## Description\n"
+            "Implement pattern increment.\n\n"
+            "## Acceptance Criteria\n"
+            "- [ ] Pattern increment works\n",
+            encoding="utf-8",
+        )
+        return path
+
+    def test_current_todo_accepts_any_todo_file_with_one_to_four_digit_number(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            todo_dir = Path(tmp) / "todo"
+            todo_dir.mkdir()
+            self._write_increment(todo_dir, "work-10-todo-later.md")
+            self._write_increment(todo_dir, "work-2-todo-sooner.md")
+            with patch.object(plan, "TODO_DIR", todo_dir):
+                current = plan.current_todo()
+        self.assertIsNotNone(current)
+        self.assertEqual(current.name, "work-2-todo-sooner.md")
+
+    def test_find_increment_accepts_one_to_four_digit_done_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            todo_dir = Path(tmp) / "todo"
+            todo_dir.mkdir()
+            self._write_increment(todo_dir, "work-3-done-feature.md")
+            with patch.object(plan, "TODO_DIR", todo_dir):
+                found = plan.find_increment(3)
+        self.assertIsNotNone(found)
+        self.assertEqual(found.name, "work-3-done-feature.md")
+
+    def test_parse_increment_accepts_custom_done_filename(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            todo_dir = Path(tmp) / "todo"
+            todo_dir.mkdir()
+            path = self._write_increment(todo_dir, "work-7-done-feature.md")
+            parsed = plan.parse_increment(path)
+        self.assertEqual(parsed["number"], 7)
+        self.assertEqual(parsed["status"], "done")
+
+
 class BuildPromptTests(unittest.TestCase):
     def _conventions(self):
         return {"X1": "# X1 principle body"}
@@ -137,6 +182,18 @@ class BuildPromptTests(unittest.TestCase):
         directive = "Read the conventions below once, then apply them."
         self.assertIn(directive, plan.build_plan_prompt(self._numbered(), self._conventions()))
         self.assertIn(directive, plan.build_plan_prompt(self._adhoc(), self._conventions()))
+
+    def test_behavioral_guardrails_are_included_without_repeating_tdd_plan(self):
+        out = plan.build_plan_prompt(self._numbered(), self._conventions())
+        self.assertIn("## BEHAVIORAL GUARDRAILS", out)
+        self.assertIn("Surface assumptions, ambiguity, and tradeoffs before editing.", out)
+        self.assertIn("Choose the minimum code path that satisfies the requirement.", out)
+        self.assertIn("Touch only lines that trace directly to the request.", out)
+        self.assertIn(
+            "Use the acceptance criteria plus the TDD and verification gates below as the success contract.",
+            out,
+        )
+        self.assertEqual(out.count("Do not write production code before a failing test."), 1)
 
     def test_adhoc_requirement_note_present_only_in_adhoc(self):
         note = "Ad-hoc requirement (not tied to a numbered increment)"

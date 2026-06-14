@@ -116,6 +116,24 @@ def format_conventions(conventions: dict[str, str]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Behavioral guardrails
+# ---------------------------------------------------------------------------
+
+def behavioral_guardrails() -> str:
+    return "\n".join([
+        "## BEHAVIORAL GUARDRAILS\n",
+        "- Surface assumptions, ambiguity, and tradeoffs before editing.",
+        "- If the requirement has multiple plausible meanings, ask before implementing.",
+        "- Choose the minimum code path that satisfies the requirement.",
+        "- Avoid speculative features, abstractions, configuration, or edge handling.",
+        "- Touch only lines that trace directly to the request.",
+        "- Match existing style; do not refactor, reformat, or delete unrelated code.",
+        "- Remove only unused code introduced by your own change.",
+        "- Use the acceptance criteria plus the TDD and verification gates below as the success contract.",
+    ])
+
+
+# ---------------------------------------------------------------------------
 # Increment loader
 # ---------------------------------------------------------------------------
 
@@ -422,6 +440,8 @@ def build_plan_prompt(inc: dict, conventions: dict[str, str]) -> str:
         header,
         f"_Generated: {now}_",
         directive,
+        "---",
+        behavioral_guardrails(),
         "---",
         format_conventions(conventions),
         "---",
