@@ -489,6 +489,8 @@ class IncrementTracker:
         old_name = increment_path.name
         new_name = _replace_increment_status(old_name, "todo", "done")
         new_path = increment_path.parent / new_name
+        if not increment_path.exists() and new_path.exists():
+            return new_path
         increment_path.rename(new_path)
         return new_path
 

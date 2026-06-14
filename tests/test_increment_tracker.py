@@ -48,6 +48,44 @@ def _make_increment(req_dir: Path, number: int, status: str = "todo",
     return path
 
 
+def _make_hyphen_increment(req_dir: Path, number: int, status: str = "todo",
+                           short_desc: str = "feature", content: str = None) -> Path:
+    """Create an increment file using the root roadmap's hyphen convention."""
+    filename = f"increment_{number:04d}-{status}-{short_desc}.md"
+    path = req_dir / filename
+    if content is None:
+        content = textwrap.dedent(f"""\
+            # Increment {number:04d} — Feature {number}
+
+            **Status:** {status.title()}
+
+            ## Goal
+            Implement feature {number}.
+
+            ## Acceptance Criteria
+            - **AC1** — Feature {number} works
+        """)
+    path.write_text(content, encoding="utf-8")
+    return path
+
+
+def _make_named_increment(req_dir: Path, filename: str, content: str = None) -> Path:
+    """Create a todo/done file with a custom supported filename pattern."""
+    path = req_dir / filename
+    if content is None:
+        content = textwrap.dedent("""\
+            # Custom Increment
+
+            ## Description
+            Implement the custom increment.
+
+            ## Acceptance Criteria
+            - [ ] Custom increment works
+        """)
+    path.write_text(content, encoding="utf-8")
+    return path
+
+
 def _make_principle(prin_dir: Path, code: str,
                     content: str = None) -> Path:
     """Create a principle file."""
@@ -127,6 +165,19 @@ class TestDiscovery(_TrackerTestCase):
         _make_increment(self.req_dir, 3, status="todo")
         self.assertIn("0003", self.tracker.current_todo().name)
 
+    def test_current_todo_accepts_hyphen_delimited_files(self):
+        _make_hyphen_increment(self.req_dir, 1)
+        current = self.tracker.current_todo()
+        self.assertIsNotNone(current)
+        self.assertEqual(current.name, "increment_0001-todo-feature.md")
+
+    def test_current_todo_accepts_any_todo_file_with_one_to_four_digit_number(self):
+        _make_named_increment(self.req_dir, "work-10-todo-later.md")
+        _make_named_increment(self.req_dir, "work-2-todo-sooner.md")
+        current = self.tracker.current_todo()
+        self.assertIsNotNone(current)
+        self.assertEqual(current.name, "work-2-todo-sooner.md")
+
 
 # -------------------------------------------------------------------
 # Parsing — strict format
@@ -163,6 +214,25 @@ class TestParseStrict(_TrackerTestCase):
         path = _make_increment(self.req_dir, 1, status="done")
         data = IncrementTracker.parse_increment(path)
         self.assertEqual(data["status"], "done")
+
+    def test_hyphen_delimited_status_and_short_desc(self):
+        path = _make_hyphen_increment(
+            self.req_dir,
+            1,
+            status="todo",
+            short_desc="scaffold-vite-ts-rnw",
+        )
+        data = IncrementTracker.parse_increment(path)
+        self.assertEqual(data["number"], 1)
+        self.assertEqual(data["status"], "todo")
+        self.assertEqual(data["short_desc"], "scaffold-vite-ts-rnw")
+
+    def test_custom_todo_filename_parses_one_to_four_digit_number_and_status(self):
+        path = _make_named_increment(self.req_dir, "work-7-todo-feature.md")
+        data = IncrementTracker.parse_increment(path)
+        self.assertEqual(data["number"], 7)
+        self.assertEqual(data["status"], "todo")
+        self.assertEqual(data["short_desc"], "feature")
 
     def test_related_principles_extracted(self):
         path = _make_increment(self.req_dir, 1)
@@ -408,6 +478,54 @@ class TestMarkDone(_TrackerTestCase):
         self.assertEqual(self.tracker.done_count(), 0)
         self.tracker.mark_done(path)
         self.assertEqual(self.tracker.done_count(), 1)
+
+    def test_mark_done_accepts_hyphen_delimited_files(self):
+        path = _make_hyphen_increment(self.req_dir, 1, status="todo")
+        new_path = self.tracker.mark_done(path)
+        self.assertEqual(new_path.name, "increment_0001-done-feature.md")
+        self.assertTrue(new_path.exists())
+        self.assertFalse(path.exists())
+
+    def test_mark_done_returns_existing_done_file_when_already_renamed(self):
+        separator = "-"
+        todo_status = "todo"
+        done_status = "done"
+        todo_name = separator.join([
+            type(self.tracker).__name__,
+            todo_status,
+            self._testMethodName,
+        ]) + ".md"
+        done_name = todo_name.replace(
+            f"{separator}{todo_status}{separator}",
+            f"{separator}{done_status}{separator}",
+        )
+        virtual_parent = MagicMock()
+        todo_path = MagicMock()
+        done_path = MagicMock()
+        todo_path.name = todo_name
+        todo_path.parent = virtual_parent
+        todo_path.exists.return_value = False
+        done_path.exists.return_value = True
+        virtual_parent.__truediv__.return_value = done_path
+
+        new_path = self.tracker.mark_done(todo_path)
+
+        virtual_parent.__truediv__.assert_called_once_with(done_name)
+        self.assertEqual(new_path, done_path)
+        todo_path.rename.assert_not_called()
+
+    def test_mark_done_accepts_custom_todo_filename(self):
+        path = _make_named_increment(self.req_dir, "work-7-todo-feature.md")
+        new_path = self.tracker.mark_done(path)
+        self.assertEqual(new_path.name, "work-7-done-feature.md")
+        self.assertTrue(new_path.exists())
+        self.assertFalse(path.exists())
+
+    def test_find_increment_file_accepts_one_to_four_digit_done_filename(self):
+        _make_named_increment(self.req_dir, "work-3-done-feature.md")
+        found = self.tracker._find_increment_file(3)
+        self.assertIsNotNone(found)
+        self.assertEqual(found.name, "work-3-done-feature.md")
 
 
 # -------------------------------------------------------------------
