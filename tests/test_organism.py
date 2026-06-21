@@ -259,6 +259,26 @@ class TestSelfDevelopmentOrganism(unittest.TestCase):
         # File should still be todo
         self.assertTrue((req_dir / "increment_0001_todo_test.md").exists())
 
+    def test_run_tests_ignores_empty_selfdev_tests_cache_dir(self):
+        """A cache-only selfdev/tests directory must not shadow root tests/."""
+        root = Path(self.tmp_dir)
+        cache_dir = root / "selfdev" / "tests" / "__pycache__"
+        cache_dir.mkdir(parents=True)
+        (cache_dir / "test_smoke.cpython-313.pyc").write_bytes(b"cache")
+
+        tests_dir = root / "tests"
+        tests_dir.mkdir()
+        (tests_dir / "test_smoke.py").write_text(
+            "def test_smoke():\n"
+            "    assert True\n",
+            encoding="utf-8",
+        )
+
+        passed, output = SelfDevelopmentOrganism._run_tests(root)
+
+        self.assertTrue(passed, output)
+        self.assertNotIn("no tests ran", output.lower())
+
 
 class TestCLI(unittest.TestCase):
 

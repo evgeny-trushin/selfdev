@@ -214,6 +214,51 @@ class BuildPromptTests(unittest.TestCase):
         self.assertNotIn('increment 0000', out)
 
 
+class QueueFreePromptTests(unittest.TestCase):
+    def test_default_goal_uses_model_and_summary_tokens(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            todo_dir = Path(tmp) / "todo"
+            todo_dir.mkdir()
+            (todo_dir / "increment_0008_todo_current.md").write_text(
+                "# Current\n", encoding="utf-8"
+            )
+
+            with patch.object(plan, "TODO_DIR", todo_dir):
+                out = plan.build_queue_free_plan_prompt()
+
+        lines = [line for line in out.splitlines() if line.strip()]
+
+        self.assertEqual(
+            lines[2],
+            "As a result of execution, create the next todo increment file at "
+            f"`{todo_dir / 'increment_0009_todo_#OUTPUT_THE_MODEL#_#OUTPUT_THE_SHORT_SUMMARY#.md'}`.",
+        )
+
+    def test_prompt_starts_with_exact_next_todo_filepath_goal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            todo_dir = Path(tmp) / "todo"
+            todo_dir.mkdir()
+            (todo_dir / "increment_0007_done_previous.md").write_text(
+                "# Previous\n", encoding="utf-8"
+            )
+            (todo_dir / "increment_0008_todo_current.md").write_text(
+                "# Current\n", encoding="utf-8"
+            )
+
+            with patch.object(plan, "TODO_DIR", todo_dir):
+                out = plan.build_queue_free_plan_prompt("Add dark mode toggle")
+
+        lines = [line for line in out.splitlines() if line.strip()]
+
+        self.assertEqual(lines[0], "# PLANNING PROMPT")
+        self.assertEqual(lines[1], "## GOAL")
+        self.assertEqual(
+            lines[2],
+            "As a result of execution, create the next todo increment file at "
+            f"`{todo_dir / 'increment_0009_todo_add_dark_mode_toggle.md'}`.",
+        )
+
+
 class CLITests(unittest.TestCase):
     def _run_main(self, argv):
         buf_out, buf_err = io.StringIO(), io.StringIO()
@@ -227,16 +272,28 @@ class CLITests(unittest.TestCase):
 
     def test_freeform_args_trigger_adhoc_mode(self):
         out, err, code = self._run_main(["design", "dark", "mode", "toggle"])
-        self.assertIn("# PLANNING PROMPT — Ad-hoc requirement", out)
+        self.assertIn("# PLANNING PROMPT", out)
         self.assertIn("design dark mode toggle", out)
+        self.assertNotIn("Ad-hoc requirement", out)
+        self.assertNotIn("tests/test_", out)
+        self.assertNotIn("Todo increments", out)
         self.assertEqual(code, 0)
 
-    def test_increment_plus_freeform_warns_and_uses_adhoc(self):
+    def test_increment_plus_freeform_warns_and_uses_queue_free_prompt(self):
         out, err, code = self._run_main(["--increment=14", "design", "X"])
-        self.assertIn("# PLANNING PROMPT — Ad-hoc requirement", out)
+        self.assertIn("# PLANNING PROMPT", out)
         self.assertIn("design X", out)
+        self.assertNotIn("Increment 0014", out)
+        self.assertNotIn("tests/test_", out)
         self.assertIn("ignoring --increment", err.lower())
         self.assertEqual(code, 0)
+
+    def test_increment_without_freeform_is_rejected_without_increment_output(self):
+        out, err, code = self._run_main(["--increment=14"])
+        self.assertEqual(out, "")
+        self.assertIn("increment selection belongs to todo.sh", err)
+        self.assertNotIn("Increment 0014", err)
+        self.assertEqual(code, 2)
 
     def test_all_principles_flag_unchanged(self):
         out, _, code = self._run_main(["--all-principles"])

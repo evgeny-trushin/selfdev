@@ -3,15 +3,15 @@
 Planning System for Self-Development Organism.
 
 Generates a structured planning prompt that walks an agent through:
-  1. Project conventions (how/ principles)
-  2. State-before snapshot (current codebase state)
-  3. Increment planning with TDD approach
-  4. State-after target (expected observable change)
-  5. Two verification gates: automated tests + visual screenshot diff
+  1. Behavioral guardrails
+  2. Requirement framing
+  3. TDD planning
+  4. Verification gates
+  5. Completion reporting
 
 Usage:
-    python3 plan.py                    # Plan next TODO increment
-    python3 plan.py --increment=0014   # Plan a specific increment
+    python3 plan.py                    # Print a generic planning prompt
+    python3 plan.py "Fix upload retry" # Plan a free-form requirement
     python3 plan.py --all-principles   # Dump full convention guide
 """
 
@@ -29,9 +29,19 @@ from pathlib import Path
 # Paths
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent
-HOW_DIR = SCRIPT_DIR / "how"
-TODO_DIR = SCRIPT_DIR / "todo"
-STATE_FILE = SCRIPT_DIR / "organism_state.json"
+
+
+def _default_project_root(script_dir: Path) -> Path:
+    parent_root = script_dir.parent
+    if (parent_root / "todo").is_dir():
+        return parent_root
+    return script_dir
+
+
+ROOT_DIR = _default_project_root(SCRIPT_DIR)
+HOW_DIR = ROOT_DIR / "how"
+TODO_DIR = ROOT_DIR / "todo"
+STATE_FILE = ROOT_DIR / "organism_state.json"
 
 
 # ---------------------------------------------------------------------------
@@ -67,7 +77,7 @@ def _read(path: Path) -> str:
 def _git(*args: str) -> str:
     try:
         return subprocess.check_output(
-            ["git", "-C", str(SCRIPT_DIR), *args],
+            ["git", "-C", str(ROOT_DIR), *args],
             stderr=subprocess.DEVNULL,
             text=True,
         ).strip()
@@ -92,6 +102,28 @@ def inc_token(inc: dict) -> str:
         return f"{inc['number']:04d}"
     slug = re.sub(r"[^a-z0-9]+", "_", (inc.get("title") or "").lower()).strip("_")
     return (slug or "adhoc")[:40]
+
+
+def requirement_file_slug(requirement: str | None) -> str:
+    text = (requirement or "").strip()
+    if not text:
+        return "#OUTPUT_THE_MODEL#_#OUTPUT_THE_SHORT_SUMMARY#"
+    return re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")
+
+
+def next_todo_increment_path(requirement: str | None = None) -> Path:
+    numbers = [
+        number
+        for path in TODO_DIR.glob("*.md")
+        for number in [_increment_number_from_name(path.name)]
+        if number is not None and _increment_status_from_name(path.name) in {"todo", "done"}
+    ]
+    next_number = (max(numbers) + 1) if numbers else 1
+    filename = (
+        f"increment_{next_number:04d}_todo_"
+        f"{requirement_file_slug(requirement)}.md"
+    )
+    return TODO_DIR / filename
 
 
 # ---------------------------------------------------------------------------
@@ -131,6 +163,79 @@ def behavioral_guardrails() -> str:
         "- Remove only unused code introduced by your own change.",
         "- Use the acceptance criteria plus the TDD and verification gates below as the success contract.",
     ])
+
+
+# ---------------------------------------------------------------------------
+# Queue-free planning prompt
+# ---------------------------------------------------------------------------
+
+def build_queue_free_plan_prompt(requirement: str | None = None) -> str:
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    next_path = next_todo_increment_path(requirement)
+    goal_block = "\n".join([
+        "## GOAL",
+        "",
+        "As a result of execution, create the next todo increment file at "
+        f"`{next_path}`.",
+    ])
+    request_text = (requirement or "").strip()
+    if request_text:
+        requirement_block = "\n".join([
+            "## REQUIREMENT",
+            "",
+            request_text,
+        ])
+    else:
+        requirement_block = "\n".join([
+            "## REQUIREMENT",
+            "",
+            "Use the user's current request as the requirement.",
+        ])
+
+    tdd_block = "\n".join([
+        "## TDD IMPLEMENTATION PLAN",
+        "",
+        "1. RED: write or update the smallest focused automated test for the requested behavior.",
+        "2. Confirm the focused test fails for the missing behavior before editing production code.",
+        "3. GREEN: implement the minimum code needed to satisfy that test.",
+        "4. REFACTOR: clean only the touched logic while the focused test stays green.",
+    ])
+
+    verification_block = "\n".join([
+        "## VERIFICATION GATES",
+        "",
+        "1. Run the focused test that failed in RED and confirm it passes.",
+        "2. Run the smallest relevant broader check for the changed area.",
+        "3. For UI or CLI behavior, compare the before and after output directly.",
+        "4. Report the exact commands run and the observed result.",
+    ])
+
+    completion_block = "\n".join([
+        "## COMPLETION",
+        "",
+        "Summarize the changed behavior, verification commands, and remaining risk.",
+    ])
+
+    sections = [
+        "# PLANNING PROMPT",
+        goal_block,
+        f"_Generated: {now}_",
+        (
+            "_Plan the implementation. Do not read, select, summarize, or advance "
+            "the increment queue from this command._"
+        ),
+        "---",
+        behavioral_guardrails(),
+        "---",
+        requirement_block,
+        "---",
+        tdd_block,
+        "---",
+        verification_block,
+        "---",
+        completion_block,
+    ]
+    return "\n\n".join(sections)
 
 
 # ---------------------------------------------------------------------------
@@ -468,11 +573,11 @@ def build_plan_prompt(inc: dict, conventions: dict[str, str]) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Generate a structured planning prompt for a selfdev increment."
+        description="Generate a structured planning prompt without selecting work."
     )
     parser.add_argument(
         "--increment", type=int, default=None,
-        help="Increment number to plan (default: current TODO)"
+        help=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--all-principles", action="store_true",
@@ -484,10 +589,8 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    conventions = load_conventions()
-
     if args.all_principles:
-        print(format_conventions(conventions))
+        print(format_conventions(load_conventions()))
         return
 
     freeform = " ".join(args.requirement).strip()
@@ -498,23 +601,18 @@ def main() -> None:
                 f"free-form requirement supplied",
                 file=sys.stderr,
             )
-        inc = adhoc_increment(freeform)
-        print(build_plan_prompt(inc, conventions))
+        print(build_queue_free_plan_prompt(freeform))
         return
 
     if args.increment is not None:
-        path = find_increment(args.increment)
-        if path is None:
-            print(f"Error: increment {args.increment:04d} not found in {TODO_DIR}")
-            raise SystemExit(1)
-    else:
-        path = current_todo()
-        if path is None:
-            print("No TODO increments remaining. All done!")
-            raise SystemExit(0)
+        print(
+            "Error: increment selection belongs to todo.sh; "
+            "plan.sh does not output increment details.",
+            file=sys.stderr,
+        )
+        raise SystemExit(2)
 
-    inc = parse_increment(path)
-    print(build_plan_prompt(inc, conventions))
+    print(build_queue_free_plan_prompt())
 
 
 if __name__ == "__main__":

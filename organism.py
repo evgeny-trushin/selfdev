@@ -191,12 +191,21 @@ class SelfDevelopmentOrganism:
         Tries pytest first; falls back to unittest discover.
         """
         import subprocess
-        test_dir = root_dir / "selfdev" / "tests"
-        if not test_dir.exists():
-            # Fallback: look for tests/ at root
-            test_dir = root_dir / "tests"
-        if not test_dir.exists():
-            return True, "No test directory found — skipping."
+
+        def has_collectable_tests(path: Path) -> bool:
+            return (
+                any(path.rglob("test*.py")) or
+                any(path.rglob("*_test.py"))
+            )
+
+        test_dir = None
+        for candidate in (root_dir / "selfdev" / "tests", root_dir / "tests"):
+            if candidate.exists() and has_collectable_tests(candidate):
+                test_dir = candidate
+                break
+
+        if test_dir is None:
+            return True, "No test files found — skipping."
 
         # Try pytest first
         try:
